@@ -166,29 +166,6 @@ const Chat = () => {
         {/* 左侧角色列表 */}
         <Col xs={24} lg={8}>
           <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            {/* 统计信息 */}
-            <div style={{ marginBottom: '1rem' }}>
-              <Row gutter={[16, 16]}>
-                <Col span={12}>
-                  <StatCard
-                    title="在线角色"
-                    value={onlineCharacters.length}
-                    suffix="个"
-                    icon={<UserOutlined />}
-                    size="small"
-                  />
-                </Col>
-                <Col span={12}>
-                  <StatCard
-                    title="消息数"
-                    value={totalMessages}
-                    suffix="条"
-                    icon={<MessageOutlined />}
-                    size="small"
-                  />
-                </Col>
-              </Row>
-            </div>
 
             {/* 角色列表 */}
             <Card 
