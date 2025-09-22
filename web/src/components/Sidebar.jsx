@@ -1,5 +1,6 @@
+import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Switch, Avatar, Button, Divider, Space } from 'antd'
+import { Switch, Avatar, Button, Divider, Space, Tooltip } from 'antd'
 import { 
   HomeOutlined, 
   UserOutlined, 
@@ -7,7 +8,9 @@ import {
   SunOutlined,
   MoonOutlined,
   LogoutOutlined,
-  LoginOutlined
+  LoginOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined
 } from '@ant-design/icons'
 import { getNavRoutes } from '../router'
 import useStore from '../store/useStore'
@@ -17,6 +20,15 @@ const Sidebar = () => {
   const location = useLocation()
   const { isDark, toggleTheme, user, logout } = useStore()
   const navRoutes = getNavRoutes()
+  const [collapsed, setCollapsed] = useState(false)
+
+  useEffect(() => {
+    // 设置 CSS 变量来控制侧边栏宽度
+    document.documentElement.style.setProperty(
+      '--sidebar-width', 
+      collapsed ? '4rem' : '16rem'
+    )
+  }, [collapsed])
 
   // 图标映射
   const iconMap = {
@@ -26,12 +38,12 @@ const Sidebar = () => {
   }
 
   return (
-    <div className={`sidebar ${isDark ? 'dark' : ''}`}>
+    <div className={`sidebar ${isDark ? 'dark' : ''} ${collapsed ? 'collapsed' : ''}`}>
       {/* 应用标题 */}
       <div className="sidebar-header">
         <div className="app-logo">
           <span className="logo-icon">🤖</span>
-          <h2 className="app-title">CharacterVerse</h2>
+          {!collapsed && <h2 className="app-title">CharacterVerse</h2>}
         </div>
       </div>
 
@@ -43,12 +55,12 @@ const Sidebar = () => {
               <Link
                 to={route.path}
                 className={`nav-link ${location.pathname === route.path ? 'active' : ''}`}
-                title={route.meta?.description}
+                title={collapsed ? route.title : route.meta?.description}
               >
                 <span className="nav-icon">
                   {iconMap[route.icon] || route.icon}
                 </span>
-                <span className="nav-text">{route.title}</span>
+                {!collapsed && <span className="nav-text">{route.title}</span>}
               </Link>
             </li>
           ))}
@@ -65,24 +77,28 @@ const Sidebar = () => {
                 icon={<UserOutlined />}
                 style={{ 
                   backgroundColor: isDark ? 'var(--primary-color)' : 'var(--success-color)',
-                  marginBottom: 'var(--spacing-sm)'
+                  marginBottom: collapsed ? 0 : 'var(--spacing-sm)'
                 }}
               />
-              <div className="user-details">
-                <div className="user-name">{user.name}</div>
-                <div className="user-email">{user.email}</div>
-              </div>
+              {!collapsed && (
+                <div className="user-details">
+                  <div className="user-name">{user.name}</div>
+                  <div className="user-email">{user.email}</div>
+                </div>
+              )}
             </div>
-            <Button 
-              type="primary" 
-              danger 
-              icon={<LogoutOutlined />}
-              onClick={logout}
-              size="small"
-              block
-            >
-              退出登录
-            </Button>
+            {!collapsed && (
+              <Button 
+                type="primary" 
+                danger 
+                icon={<LogoutOutlined />}
+                onClick={logout}
+                size="small"
+                block
+              >
+                退出登录
+              </Button>
+            )}
           </div>
         ) : (
           <div className="login-prompt">
@@ -92,23 +108,36 @@ const Sidebar = () => {
               style={{ 
                 backgroundColor: 'var(--bg-tertiary)',
                 color: 'var(--text-secondary)',
-                marginBottom: 'var(--spacing-sm)'
+                marginBottom: collapsed ? 0 : 'var(--spacing-sm)'
               }}
             />
-            <p>未登录</p>
-            <Link to="/user">
-              <Button 
-                type="primary" 
-                icon={<LoginOutlined />}
-                size="small"
-                block
-              >
-                去登录
-              </Button>
-            </Link>
+            {!collapsed && (
+              <>
+                <p>未登录</p>
+                <Link to="/user">
+                  <Button 
+                    type="primary" 
+                    icon={<LoginOutlined />}
+                    size="small"
+                    block
+                  >
+                    去登录
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
         )}
       </div>
+        {/* 折叠按钮 */}
+        <Tooltip title={collapsed ? '展开侧边栏' : '折叠侧边栏'} placement="right">
+          <Button
+            type="text"
+            icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+            onClick={() => setCollapsed(!collapsed)}
+            className="sidebar-toggle"
+          />
+        </Tooltip>
     </div>
   )
 }

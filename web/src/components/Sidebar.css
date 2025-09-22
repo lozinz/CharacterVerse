@@ -10,8 +10,33 @@
   left: 0;
   top: 0;
   z-index: var(--z-index-fixed);
-  transition: background-color var(--animation-duration-base) var(--ease-out),
-              border-color var(--animation-duration-base) var(--ease-out);
+  transition: all var(--animation-duration-base) var(--ease-out);
+}
+
+/* 折叠状态 */
+.sidebar.collapsed {
+  width: 4rem;
+}
+
+.sidebar.collapsed .app-title,
+.sidebar.collapsed .nav-text,
+.sidebar.collapsed .user-details,
+.sidebar.collapsed .login-prompt p,
+.sidebar.collapsed .login-prompt .ant-btn span {
+  display: none;
+}
+
+.sidebar.collapsed .nav-link {
+  justify-content: center;
+  padding: var(--spacing-md);
+}
+
+.sidebar.collapsed .user-info {
+  align-items: center;
+}
+
+.sidebar.collapsed .login-prompt {
+  align-items: center;
 }
 
 /* 侧边栏头部 */
@@ -22,6 +47,30 @@
   align-items: center;
   justify-content: space-between;
   transition: border-color var(--animation-duration-base) var(--ease-out);
+  position: relative;
+}
+
+
+.sidebar-toggle {
+  width: 100% !important;
+  border: none !important;
+  background: transparent !important;
+  color: var(--text-secondary);
+  font-size: var(--font-size-lg);
+  cursor: pointer;
+  padding: var(--spacing-xs);
+  border-radius: var(--border-radius-sm);
+  transition: all var(--animation-duration-base) var(--ease-out);
+}
+
+.sidebar-toggle:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.sidebar-toggle:focus {
+  outline: none;
+  box-shadow: none;
 }
 
 .app-logo {
@@ -217,14 +266,27 @@
   border-color: var(--primary-hover);
 }
 
+/* 移除所有按钮的焦点边框 */
+.sidebar .ant-btn:focus,
+.sidebar .ant-btn:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+/* 移除链接按钮的焦点边框 */
+.sidebar .nav-link:focus {
+  outline: none;
+  box-shadow: none;
+}
+
 .sidebar .ant-avatar {
   background: var(--primary-color);
   color: var(--text-inverse);
 }
 
-/* 响应式设计 */
+/* 响应式设计 - 仅在非折叠状态下生效 */
 @media (max-width: 768px) {
-  .sidebar {
+  .sidebar:not(.collapsed) {
     width: 14rem;
   }
   
@@ -238,7 +300,7 @@
 }
 
 @media (max-width: 480px) {
-  .sidebar {
+  .sidebar:not(.collapsed) {
     width: 12rem;
   }
   
