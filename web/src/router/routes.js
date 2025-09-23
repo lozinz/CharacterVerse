@@ -4,7 +4,6 @@ import { lazy } from 'react'
 const Home = lazy(() => import('../pages/Home'))
 const CharacterManagement = lazy(() => import('../pages/CharacterManagement'))
 const Chat = lazy(() => import('../pages/Chat'))
-const ThemeDemo = lazy(() => import('../pages/ThemeDemo'))
 const Profile = lazy(() => import('../pages/Profile'))
 const Settings = lazy(() => import('../pages/Settings'))
 
@@ -44,18 +43,6 @@ export const routes = [
     meta: {
       requiresAuth: true,
       description: '与AI角色对话'
-    }
-  },
-  {
-    path: '/theme',
-    element: ThemeDemo,
-    name: 'theme',
-    title: '主题演示',
-    icon: '🎨',
-    showInNav: true,
-    meta: {
-      requiresAuth: false,
-      description: '主题控制系统演示'
     }
   },
   {
