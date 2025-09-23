@@ -27,7 +27,8 @@ func JWTAuth() gin.HandlerFunc {
 
 		// 将用户ID存入上下文
 		if claims, ok := token.Claims.(jwt.MapClaims); ok {
-			c.Set("userID", claims["user_id"])
+			userID := uint(claims["user_id"].(float64))
+			c.Set("userID", userID)
 		}
 
 		c.Next()
