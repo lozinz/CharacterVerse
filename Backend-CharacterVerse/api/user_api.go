@@ -2,6 +2,7 @@ package api
 
 import (
 	"Backend-CharacterVerse/service"
+	"Backend-CharacterVerse/utils/response"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -20,30 +21,30 @@ type LoginRequest struct {
 func Register(c *gin.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "参数错误"})
+		c.JSON(http.StatusBadRequest, response.BadRequest("参数错误"))
 		return
 	}
 
 	if err := service.RegisterUser(req.Username, req.Password); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, response.InternalError(err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "注册成功"})
+	c.JSON(http.StatusOK, response.Success("注册成功"))
 }
 
 func Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "参数错误"})
+		c.JSON(http.StatusBadRequest, response.BadRequest("参数错误"))
 		return
 	}
 
 	token, err := service.LoginUser(req.Username, req.Password)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnauthorized, response.Unauthorized(err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"token": token})
+	c.JSON(http.StatusOK, response.Success(gin.H{"token": token}))
 }
