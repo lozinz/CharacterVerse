@@ -1,7 +1,6 @@
 import { Suspense } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { routes } from './routes'
-import RouteGuard from './RouteGuard'
 
 // 加载中组件
 const LoadingComponent = () => (
@@ -31,11 +30,7 @@ function RouterView() {
             <Route
               key={route.path}
               path={route.path}
-              element={
-                <RouteGuard requiresAuth={route.meta?.requiresAuth}>
-                  <Component />
-                </RouteGuard>
-              }
+              element={<Component />}
             />
           )
         })}
