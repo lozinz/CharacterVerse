@@ -4,8 +4,9 @@ import { lazy } from 'react'
 const Home = lazy(() => import('../pages/Home'))
 const CharacterManagement = lazy(() => import('../pages/CharacterManagement'))
 const Chat = lazy(() => import('../pages/Chat'))
-const User = lazy(() => import('../pages/User'))
-const About = lazy(() => import('../pages/About'))
+const ThemeDemo = lazy(() => import('../pages/ThemeDemo'))
+const Profile = lazy(() => import('../pages/Profile'))
+const Settings = lazy(() => import('../pages/Settings'))
 
 // 路由配置表
 export const routes = [
@@ -22,51 +23,63 @@ export const routes = [
     }
   },
   {
-    path: '/character',
+    path: '/characters',
     element: CharacterManagement,
-    name: 'character',
-    title: '个人角色管理',
+    name: 'characters',
+    title: '角色管理',
     icon: '👤',
     showInNav: true,
     meta: {
-      requiresAuth: false,
-      description: '管理个人角色'
+      requiresAuth: true,
+      description: '管理您的AI角色'
     }
   },
   {
     path: '/chat',
     element: Chat,
     name: 'chat',
-    title: '聊天',
+    title: '智能聊天',
     icon: '💬',
     showInNav: true,
     meta: {
-      requiresAuth: false,
-      description: '角色聊天'
+      requiresAuth: true,
+      description: '与AI角色对话'
     }
   },
   {
-    path: '/user',
-    element: User,
-    name: 'user',
-    title: '用户中心',
-    icon: '👤',
-    showInNav: false,
-    meta: {
-      requiresAuth: false,
-      description: '用户登录和管理'
-    }
-  },
-  {
-    path: '/about',
-    element: About,
-    name: 'about',
-    title: '关于',
-    icon: 'ℹ️',
+    path: '/theme',
+    element: ThemeDemo,
+    name: 'theme',
+    title: '主题演示',
+    icon: '🎨',
     showInNav: true,
     meta: {
       requiresAuth: false,
-      description: '关于项目信息'
+      description: '主题控制系统演示'
+    }
+  },
+  {
+    path: '/profile',
+    element: Profile,
+    name: 'profile',
+    title: '个人资料',
+    icon: '👤',
+    showInNav: false,
+    meta: {
+      requiresAuth: true,
+      description: '查看和编辑个人资料'
+    }
+  },
+  {
+    path: '/settings',
+    element: Settings,
+    name: 'settings',
+    title: '设置',
+    icon: '⚙️',
+    showInNav: false,
+    meta: {
+      requiresAuth: true,
+      description: '应用设置和偏好'
     }
   }
 ]

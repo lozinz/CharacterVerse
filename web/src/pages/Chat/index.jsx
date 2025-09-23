@@ -24,6 +24,7 @@ import {
 } from '@ant-design/icons'
 import PageContainer from '../../components/PageContainer'
 import StatCard from '../../components/StatCard'
+import './Chat.css'
 
 const { TextArea } = Input
 const { Text, Title } = Typography
@@ -162,242 +163,185 @@ const Chat = () => {
       title="智能聊天"
       description="与您的AI角色进行对话交流"
     >
-      <Row gutter={[24, 24]} style={{ height: 'calc(100vh - 12rem)' }}>
-        {/* 左侧角色列表 */}
-        <Col xs={24} lg={8}>
-          <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <div className="chat-page">
+        <Row gutter={[24, 24]} style={{ height: 'calc(100vh - 12rem)' }}>
+          {/* 左侧角色列表 */}
+          <Col xs={24} lg={4}>
+            <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
 
-            {/* 角色列表 */}
-            <Card 
-              title="选择聊天角色" 
-              style={{ flex: 1, overflow: 'hidden' }}
-              bodyStyle={{ padding: 0, height: 'calc(100% - 3rem)', overflow: 'auto' }}
-            >
-              <List
-                dataSource={characters}
-                renderItem={(character) => (
-                  <List.Item
-                    style={{
-                      padding: '1rem',
-                      cursor: 'pointer',
-                      backgroundColor: selectedCharacter?.id === character.id ? '#f0f8ff' : 'transparent',
-                      borderLeft: selectedCharacter?.id === character.id ? '3px solid #1890ff' : '3px solid transparent'
-                    }}
-                    onClick={() => handleCharacterSelect(character)}
-                  >
-                    <List.Item.Meta
-                      avatar={
-                        <div style={{ position: 'relative' }}>
-                          <Avatar size={48} style={{ fontSize: '1.5rem' }}>
-                            {character.avatar}
-                          </Avatar>
-                          <div
-                            style={{
-                              position: 'absolute',
-                              bottom: 0,
-                              right: 0,
-                              width: '12px',
-                              height: '12px',
-                              borderRadius: '50%',
-                              backgroundColor: character.online ? '#52c41a' : '#d9d9d9',
-                              border: '2px solid white'
-                            }}
-                          />
-                        </div>
-                      }
-                      title={
-                        <Space>
-                          <Text strong>{character.name}</Text>
-                          {!character.online && <Tag color="default">离线</Tag>}
-                        </Space>
-                      }
-                      description={
-                        <div>
-                          <Text type="secondary" style={{ fontSize: '0.75rem' }}>
-                            {character.personality}
-                          </Text>
-                          <div style={{ marginTop: '0.25rem' }}>
-                            {character.tags.slice(0, 2).map(tag => (
-                              <Tag key={tag} size="small" color="blue">
-                                {tag}
-                              </Tag>
-                            ))}
-                          </div>
-                        </div>
-                      }
-                    />
-                  </List.Item>
-                )}
-              />
-            </Card>
-          </div>
-        </Col>
-
-        {/* 右侧聊天区域 */}
-        <Col xs={24} lg={16}>
-          <Card 
-            style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
-            bodyStyle={{ padding: 0, flex: 1, display: 'flex', flexDirection: 'column' }}
-          >
-            {selectedCharacter ? (
-              <>
-                {/* 聊天头部 */}
-                <div style={{ 
-                  padding: '1rem', 
-                  borderBottom: '1px solid #f0f0f0',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}>
-                  <Space>
-                    <Avatar size={40} style={{ fontSize: '1.25rem' }}>
-                      {selectedCharacter.avatar}
-                    </Avatar>
-                    <div>
-                      <Title level={5} style={{ margin: 0 }}>
-                        {selectedCharacter.name}
-                      </Title>
-                      <Text type="secondary" style={{ fontSize: '0.75rem' }}>
-                        {selectedCharacter.personality}
-                      </Text>
-                    </div>
-                  </Space>
-                  <Space>
-                    <Tooltip title="清空聊天记录">
-                      <Button 
-                        icon={<DeleteOutlined />} 
-                        onClick={clearMessages}
-                        type="text"
-                      />
-                    </Tooltip>
-                  </Space>
-                </div>
-
-                {/* 消息列表 */}
-                <div style={{ 
-                  flex: 1, 
-                  padding: '1rem', 
-                  overflow: 'auto',
-                  backgroundColor: '#fafafa'
-                }}>
-                  {messages.map((message) => (
-                    <div
-                      key={message.id}
-                      style={{
-                        display: 'flex',
-                        justifyContent: message.type === 'user' ? 'flex-end' : 'flex-start',
-                        marginBottom: '1rem'
-                      }}
+              {/* 角色列表 */}
+              <Card 
+                title="选择聊天角色" 
+                style={{ flex: 1, overflow: 'hidden' }}
+                bodyStyle={{ padding: 0, height: 'calc(100%)', overflow: 'auto' }}
+              >
+                <List
+                  dataSource={characters}
+                  renderItem={(character) => (
+                    <List.Item
+                      className={`character-list-item ${selectedCharacter?.id === character.id ? 'selected' : ''}`}
+                      onClick={() => handleCharacterSelect(character)}
                     >
-                      <div
-                        style={{
-                          maxWidth: '70%',
-                          display: 'flex',
-                          flexDirection: message.type === 'user' ? 'row-reverse' : 'row',
-                          alignItems: 'flex-start',
-                          gap: '0.5rem'
-                        }}
-                      >
-                        <Avatar 
-                          size={32}
-                          icon={message.type === 'user' ? <UserOutlined /> : <RobotOutlined />}
-                          style={{ 
-                            backgroundColor: message.type === 'user' ? '#1890ff' : '#52c41a',
-                            fontSize: '0.875rem'
-                          }}
-                        >
-                          {message.type === 'ai' ? selectedCharacter.avatar : null}
-                        </Avatar>
-                        <div>
-                          <div
-                            style={{
-                              padding: '0.75rem 1rem',
-                              borderRadius: '1rem',
-                              backgroundColor: message.type === 'user' ? '#1890ff' : 'white',
-                              color: message.type === 'user' ? 'white' : 'black',
-                              boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
-                              wordBreak: 'break-word'
-                            }}
-                          >
-                            {message.content}
+                      <List.Item.Meta
+                        avatar={
+                          <div style={{ padding: '1rem'}}>
+                            <Avatar size={48} style={{ fontSize: '1.5rem' }}>
+                              {character.avatar}
+                            </Avatar>
                           </div>
-                          <Text 
-                            type="secondary" 
-                            style={{ 
-                              fontSize: '0.75rem',
-                              marginTop: '0.25rem',
-                              display: 'block',
-                              textAlign: message.type === 'user' ? 'right' : 'left'
-                            }}
-                          >
-                            {message.timestamp}
-                          </Text>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  
-                  {isTyping && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Avatar size={32} style={{ backgroundColor: '#52c41a', fontSize: '0.875rem' }}>
+                        }
+                        title={
+                          <Space>
+                            <Text strong>{character.name}</Text>
+                          </Space>
+                        }
+                        description={
+                          <div>
+                            <Text type="secondary" style={{ fontSize: '0.75rem' }}>
+                              {character.personality}
+                            </Text>
+                            <div className="character-tags">
+                              {character.tags.slice(0, 2).map(tag => (
+                                <Tag key={tag} size="small" color="blue">
+                                  {tag}
+                                </Tag>
+                              ))}
+                            </div>
+                          </div>
+                        }
+                      />
+                    </List.Item>
+                  )}
+                />
+              </Card>
+            </div>
+          </Col>
+
+          {/* 右侧聊天区域 */}
+          <Col xs={24} lg={16}>
+            <Card 
+              style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+              bodyStyle={{ padding: 0, flex: 1, display: 'flex', flexDirection: 'column' }}
+            >
+              {selectedCharacter ? (
+                <>
+                  {/* 聊天头部 */}
+                  <div className="chat-header">
+                    <Space>
+                      <Avatar size={40} style={{ fontSize: '1.25rem' }}>
                         {selectedCharacter.avatar}
                       </Avatar>
-                      <div style={{
-                        padding: '0.75rem 1rem',
-                        borderRadius: '1rem',
-                        backgroundColor: 'white',
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
-                      }}>
-                        <Text type="secondary">正在输入...</Text>
+                      <div>
+                        <Title level={5} style={{ margin: 0 }}>
+                          {selectedCharacter.name}
+                        </Title>
+                        <Text type="secondary" style={{ fontSize: '0.75rem' }}>
+                          {selectedCharacter.personality}
+                        </Text>
                       </div>
-                    </div>
-                  )}
-                  <div ref={messagesEndRef} />
-                </div>
+                    </Space>
+                    <Space>
+                      <Tooltip title="清空聊天记录">
+                        <Button 
+                          icon={<DeleteOutlined />} 
+                          onClick={clearMessages}
+                          type="text"
+                        />
+                      </Tooltip>
+                    </Space>
+                  </div>
 
-                {/* 输入区域 */}
-                <div style={{ 
-                  padding: '1rem', 
-                  borderTop: '1px solid #f0f0f0',
-                  backgroundColor: 'white'
-                }}>
-                  <Space.Compact style={{ width: '100%' }}>
-                    <TextArea
-                      value={inputValue}
-                      onChange={(e) => setInputValue(e.target.value)}
-                      onKeyPress={handleKeyPress}
-                      placeholder={`与 ${selectedCharacter.name} 对话...`}
-                      autoSize={{ minRows: 1, maxRows: 4 }}
-                      style={{ resize: 'none' }}
-                    />
-                    <Button
-                      type="primary"
-                      icon={<SendOutlined />}
-                      onClick={handleSendMessage}
-                      disabled={!inputValue.trim()}
-                      style={{ height: 'auto' }}
-                    >
-                      发送
-                    </Button>
-                  </Space.Compact>
+                  {/* 消息列表 */}
+                  <div className="messages-container">
+                    {messages.map((message) => (
+                      <div
+                        key={message.id}
+                        style={{
+                          display: 'flex',
+                          justifyContent: message.type === 'user' ? 'flex-end' : 'flex-start',
+                          marginBottom: '1rem'
+                        }}
+                      >
+                        <div
+                          style={{
+                            maxWidth: '70%',
+                            display: 'flex',
+                            flexDirection: message.type === 'user' ? 'row-reverse' : 'row',
+                            alignItems: 'flex-start',
+                            gap: '0.5rem'
+                          }}
+                        >
+                          <div className={`message-avatar ${message.type}`}>
+                            <Avatar 
+                              size={32}
+                              icon={message.type === 'user' ? <UserOutlined /> : <RobotOutlined />}
+                              style={{ fontSize: '0.875rem' }}
+                            >
+                              {message.type === 'ai' ? selectedCharacter.avatar : null}
+                            </Avatar>
+                          </div>
+                          <div>
+                            <div className={`message-bubble ${message.type}`}>
+                              {message.content}
+                            </div>
+                            <div className={`message-timestamp ${message.type}`}>
+                              {message.timestamp}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {isTyping && (
+                      <div className="typing-indicator">
+                        <div className="message-avatar ai">
+                          <Avatar size={32} style={{ fontSize: '0.875rem' }}>
+                            {selectedCharacter.avatar}
+                          </Avatar>
+                        </div>
+                        <div className="typing-bubble">
+                          <Text type="secondary">正在输入...</Text>
+                        </div>
+                      </div>
+                    )}
+                    <div ref={messagesEndRef} />
+                  </div>
+
+                  {/* 输入区域 */}
+                  <div className="chat-input-area">
+                    <Space.Compact style={{ width: '100%' }}>
+                      <TextArea
+                        value={inputValue}
+                        onChange={(e) => setInputValue(e.target.value)}
+                        onKeyPress={handleKeyPress}
+                        placeholder={`与 ${selectedCharacter.name} 对话...`}
+                        autoSize={{ minRows: 1, maxRows: 4 }}
+                        style={{ resize: 'none' }}
+                      />
+                      <Button
+                        type="primary"
+                        icon={<SendOutlined />}
+                        onClick={handleSendMessage}
+                        disabled={!inputValue.trim()}
+                        style={{ height: 'auto' }}
+                      >
+                        发送
+                      </Button>
+                    </Space.Compact>
+                  </div>
+                </>
+              ) : (
+                <div className="chat-empty-state">
+                  <Empty
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    description="请选择一个角色开始聊天"
+                  />
                 </div>
-              </>
-            ) : (
-              <div style={{ 
-                flex: 1, 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center' 
-              }}>
-                <Empty
-                  image={Empty.PRESENTED_IMAGE_SIMPLE}
-                  description="请选择一个角色开始聊天"
-                />
-              </div>
-            )}
-          </Card>
-        </Col>
-      </Row>
+              )}
+            </Card>
+          </Col>
+        </Row>
+      </div>
     </PageContainer>
   )
 }
