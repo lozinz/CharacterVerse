@@ -28,6 +28,6 @@ func InitDB() {
 	}
 
 	// 自动迁移模型
-	DB.AutoMigrate(&model.User{}, &model.Role{})
+	DB.AutoMigrate(&model.User{}, &model.Role{}, &model.ChatHistory{})
 
 }

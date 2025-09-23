@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeepSeek 模型测试</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f7fa;
+            color: #333;
+        }
+        
+        .container {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            padding: 25px;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            box-sizing: border-box;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus, textarea:focus {
+            border-color: #3498db;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+        }
+        
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+        
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: background-color 0.3s;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        
+        button:hover {
+            background-color: #2980b9;
+        }
+        
+        button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+        
+        .response-container {
+            margin-top: 30px;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+        
+        .response {
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .status {
+            padding: 10px;
+            text-align: center;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+        
+        .success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #3498db;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>DeepSeek 模型测试</h1>
+        
+        <div class="input-group">
+            <label for="apiKey">API 密钥：</label>
+            <input type="password" id="apiKey" placeholder="输入您的七牛云API密钥">
+        </div>
+        
+        <div class="input-group">
+            <label for="systemPrompt">系统提示：</label>
+            <textarea id="systemPrompt" placeholder="输入系统提示">你是一个乐于助人的AI助手</textarea>
+        </div>
+        
+        <div class="input-group">
+            <label for="userMessage">用户消息：</label>
+            <textarea id="userMessage" placeholder="输入要发送的消息">你好！请介绍一下你自己</textarea>
+        </div>
+        
+        <button id="testBtn">测试 DeepSeek 模型</button>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>正在调用API，请稍候...</p>
+        </div>
+        
+        <div id="status" class="status"></div>
+        
+        <div class="response-container">
+            <h2>API 响应</h2>
+            <pre id="response" class="response">响应将显示在这里</pre>
+        </div>
+    </div>
+
+    <script>
+        // DOM元素
+        const apiKeyInput = document.getElementById('apiKey');
+        const systemPromptInput = document.getElementById('systemPrompt');
+        const userMessageInput = document.getElementById('userMessage');
+        const testBtn = document.getElementById('testBtn');
+        const statusDiv = document.getElementById('status');
+        const responseDiv = document.getElementById('response');
+        const loadingDiv = document.getElementById('loading');
+        
+        // 测试按钮点击事件
+        testBtn.addEventListener('click', async () => {
+            const apiKey = apiKeyInput.value.trim();
+            const systemPrompt = systemPromptInput.value.trim();
+            const userMessage = userMessageInput.value.trim();
+            
+            if (!apiKey) {
+                showStatus('请输入API密钥', 'error');
+                return;
+            }
+            
+            if (!userMessage) {
+                showStatus('请输入用户消息', 'error');
+                return;
+            }
+            
+            // 显示加载状态
+            loadingDiv.style.display = 'block';
+            testBtn.disabled = true;
+            showStatus('正在调用API...', 'success');
+            
+            try {
+                // 调用API
+                const response = await callDeepSeekAPI(apiKey, systemPrompt, userMessage);
+                
+                // 显示响应
+                responseDiv.textContent = JSON.stringify(response, null, 2);
+                showStatus('API调用成功！', 'success');
+            } catch (error) {
+                // 显示错误
+                responseDiv.textContent = error.message;
+                showStatus(`API调用失败: ${error.message}`, 'error');
+            } finally {
+                // 隐藏加载状态
+                loadingDiv.style.display = 'none';
+                testBtn.disabled = false;
+            }
+        });
+        
+        // 调用DeepSeek API
+        async function callDeepSeekAPI(apiKey, systemPrompt, userMessage) {
+            const apiUrl = 'https://openai.qiniu.com/v1/chat/completions';
+            
+            const requestBody = {
+                stream: false,
+                model: 'deepseek/deepseek-v3.1-terminus',
+                messages: [
+                    {
+                        role: 'system',
+                        content: systemPrompt || '你是一个乐于助人的AI助手'
+                    },
+                    {
+                        role: 'user',
+                        content: userMessage
+                    }
+                ]
+            };
+            
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            });
+            
+            if (!response.ok) {
+                let errorMessage = `API返回错误状态码: ${response.status}`;
+                try {
+                    const errorData = await response.json();
+                    errorMessage += `, 错误信息: ${JSON.stringify(errorData)}`;
+                } catch (e) {
+                    errorMessage += `, 无法解析错误响应`;
+                }
+                throw new Error(errorMessage);
+            }
+            
+            return await response.json();
+        }
+        
+        // 显示状态消息
+        function showStatus(message, type) {
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+        }
+        
+        // 示例：自动填充测试密钥（仅用于演示，实际使用时请删除）
+        window.addEventListener('DOMContentLoaded', () => {
+            // 这里仅用于演示，实际使用时请删除
+            // apiKeyInput.value = 'your_test_api_key_here';
+        });
+    </script>
+</body>
+</html>

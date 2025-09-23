@@ -20,5 +20,6 @@ func RouterInit(r *gin.Engine) {
 	auth.Use(middleware.JWTAuth())
 	{
 		auth.POST("/user/addRole", api.AddRole)
+		auth.GET("/ws/chat", api.ChatHandler)
 	}
 }
