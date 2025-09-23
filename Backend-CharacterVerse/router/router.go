@@ -19,6 +19,7 @@ func RouterInit(r *gin.Engine) {
 	auth := r.Group("/api")
 	auth.Use(middleware.JWTAuth())
 	{
-		// 后续添加需要认证的接口
+		auth.POST("/user/addRole", api.AddRole)
+		auth.GET("/ws/chat", api.ChatHandler)
 	}
 }
