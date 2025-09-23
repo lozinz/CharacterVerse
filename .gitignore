@@ -1,0 +1,33 @@
+# ===========================================
+# CharacterVerse-AI Project .gitignore
+# ===========================================
+
+# ===== Docker 相关 =====
+# Docker 构建缓存
+.dockerignore
+docker-compose.override.yml
+docker-compose.prod.yml
+
+# Docker 数据卷和日志
+nginx/logs/
+mysql_data/
+.docker/
+
+
+# ===== 后端 (Go) =====
+
+# Air 热重载临时文件
+Backend-CharacterVerse/tmp/
+Backend-CharacterVerse/.air/
+
+
+# ===== 保留的重要文件 =====
+# 确保这些文件被跟踪
+!.gitkeep
+!README*.md
+!LICENSE
+!Dockerfile*
+!docker-compose*.yml
+!nginx/nginx.conf
+!nginx/conf.d/
+!Backend-CharacterVerse/.air.toml

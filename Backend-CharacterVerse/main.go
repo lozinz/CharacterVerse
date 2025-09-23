@@ -10,6 +10,7 @@ import (
 )
 
 func main() {
+	// 测试热重载功能 - Hot reload test
 	config.LoadConfig() // 加载配置
 	database.InitDB()   // 初始化数据库连接
 
