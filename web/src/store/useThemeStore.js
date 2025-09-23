@@ -128,6 +128,7 @@ const useThemeStore = create((set, get) => ({
     root.style.setProperty('--info-hover', get().lightenColor(customColors.info, 20))
     root.style.setProperty('--info-active', get().darkenColor(customColors.info, 20))
     root.style.setProperty('--info-light', get().lightenColor(customColors.info, 90))
+    get().saveThemeToLocal()
   },
 
   // 颜色工具函数 - 变亮

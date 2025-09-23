@@ -166,33 +166,14 @@ const Chat = () => {
       <div className="chat-page">
         <Row gutter={[24, 24]} style={{ height: 'calc(100vh - 12rem)' }}>
           {/* 左侧角色列表 */}
-          <Col xs={24} lg={8}>
+          <Col xs={24} lg={4}>
             <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-              {/* 统计卡片 */}
-              <Row gutter={[16, 16]} style={{ marginBottom: '1rem' }}>
-                <Col span={12}>
-                  <StatCard
-                    title="在线角色"
-                    value={onlineCharacters.length}
-                    icon={<MessageOutlined />}
-                    color="#52c41a"
-                  />
-                </Col>
-                <Col span={12}>
-                  <StatCard
-                    title="消息数量"
-                    value={totalMessages}
-                    icon={<HistoryOutlined />}
-                    color="#1890ff"
-                  />
-                </Col>
-              </Row>
 
               {/* 角色列表 */}
               <Card 
                 title="选择聊天角色" 
                 style={{ flex: 1, overflow: 'hidden' }}
-                bodyStyle={{ padding: 0, height: 'calc(100% - 3rem)', overflow: 'auto' }}
+                bodyStyle={{ padding: 0, height: 'calc(100%)', overflow: 'auto' }}
               >
                 <List
                   dataSource={characters}
@@ -203,17 +184,15 @@ const Chat = () => {
                     >
                       <List.Item.Meta
                         avatar={
-                          <div style={{ position: 'relative' }}>
+                          <div style={{ padding: '1rem'}}>
                             <Avatar size={48} style={{ fontSize: '1.5rem' }}>
                               {character.avatar}
                             </Avatar>
-                            <div className={`online-indicator ${character.online ? 'online' : 'offline'}`} />
                           </div>
                         }
                         title={
                           <Space>
                             <Text strong>{character.name}</Text>
-                            {!character.online && <Tag color="default">离线</Tag>}
                           </Space>
                         }
                         description={
