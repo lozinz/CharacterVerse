@@ -124,13 +124,11 @@ func GenerateQiniuTTS(text string, voiceType string, encoding string, speed floa
 
 // TTSHandler 处理TTS请求的API端点
 func TTSHandler(c *gin.Context) {
-	// 解析请求参数
 	var request struct {
 		Text     string  `json:"text" binding:"required"`
-		Voice    string  `json:"voice,omitempty"` // 七牛云音色类型
+		Voice    string  `json:"voice,omitempty"`
 		Encoding string  `json:"encoding,omitempty"`
 		Speed    float64 `json:"speed,omitempty"`
-		Response string  `json:"response,omitempty"` // url 或 audio
 	}
 
 	if err := c.ShouldBindJSON(&request); err != nil {
@@ -140,16 +138,15 @@ func TTSHandler(c *gin.Context) {
 
 	// 设置默认值
 	if request.Voice == "" {
-		request.Voice = "qiniu_zh_female_wwxkjx" // 默认音色
+		request.Voice = "qiniu_zh_female_wwxkjx"
 	}
 	if request.Encoding == "" {
-		request.Encoding = "mp3" // 默认音频格式
+		request.Encoding = "mp3"
 	}
 	if request.Speed == 0 {
-		request.Speed = 1.0 // 默认语速
+		request.Speed = 1.0
 	}
 
-	// 生成TTS音频
 	audioData, err := GenerateQiniuTTS(request.Text, request.Voice, request.Encoding, request.Speed)
 	if err != nil {
 		log.Printf("TTS生成失败: %v", err)
@@ -157,14 +154,8 @@ func TTSHandler(c *gin.Context) {
 		return
 	}
 
-	// 根据请求类型返回结果
-	if request.Response == "url" {
-		// 返回base64编码的音频URL
-		c.JSON(http.StatusOK, gin.H{
-			"audio_url": "data:audio/" + request.Encoding + ";base64," + base64.StdEncoding.EncodeToString(audioData),
-		})
-	} else {
-		// 直接返回音频数据
-		c.Data(http.StatusOK, "audio/"+request.Encoding, audioData)
-	}
+	// 返回base64编码的音频URL
+	c.JSON(http.StatusOK, gin.H{
+		"audio_url": "data:audio/" + request.Encoding + ";base64," + base64.StdEncoding.EncodeToString(audioData),
+	})
 }

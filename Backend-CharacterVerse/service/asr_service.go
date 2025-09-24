@@ -14,13 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// ASR请求结构体
-type ASRRequest struct {
-	AudioURL string `json:"audio_url" binding:"required"`
-	Format   string `json:"format,omitempty"` // 音频格式
-}
-
-// 七牛云ASR请求结构体
+// 七牛云ASR请求结构体 (修正版)
 type QiniuASRRequest struct {
 	Model string `json:"model"`
 	Audio struct {
@@ -46,7 +40,7 @@ type QiniuASRResponse struct {
 	} `json:"data"`
 }
 
-// RecognizeSpeech 调用七牛云ASR服务识别语音
+// RecognizeSpeech 调用七牛云ASR服务识别语音 (修复版)
 func RecognizeSpeech(audioURL string, format string) (string, error) {
 	apiKey := os.Getenv("QINIU_API_KEY")
 	if apiKey == "" {
@@ -63,7 +57,7 @@ func RecognizeSpeech(audioURL string, format string) (string, error) {
 		format = "mp3" // 默认格式
 	}
 
-	// 构造请求体
+	// 构造请求体 (修正版)
 	asrReq := QiniuASRRequest{
 		Model: "asr",
 		Audio: struct {
@@ -79,6 +73,9 @@ func RecognizeSpeech(audioURL string, format string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("JSON序列化失败: %w", err)
 	}
+
+	// 调试日志：打印请求体
+	log.Printf("ASR请求体: %s", string(jsonData))
 
 	// 创建HTTP请求
 	req, err := http.NewRequest(
@@ -105,15 +102,35 @@ func RecognizeSpeech(audioURL string, format string) (string, error) {
 	}
 	defer resp.Body.Close()
 
+	// 读取完整响应体
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("读取响应体失败: %w", err)
+	}
+
 	// 检查响应状态
 	if resp.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("ASR API返回错误状态码: %d, 响应: %s", resp.StatusCode, string(bodyBytes))
+		// 尝试解析错误响应
+		var errorResponse struct {
+			Error struct {
+				Message string `json:"message"`
+				Type    string `json:"type"`
+			} `json:"error"`
+		}
+
+		if err := json.Unmarshal(bodyBytes, &errorResponse); err == nil {
+			return "", fmt.Errorf("ASR API错误: %s (类型: %s)",
+				errorResponse.Error.Message,
+				errorResponse.Error.Type)
+		}
+
+		return "", fmt.Errorf("ASR API返回错误状态码: %d, 响应: %s",
+			resp.StatusCode, string(bodyBytes))
 	}
 
 	// 解析响应
 	var apiResponse QiniuASRResponse
-	if err := json.NewDecoder(resp.Body).Decode(&apiResponse); err != nil {
+	if err := json.Unmarshal(bodyBytes, &apiResponse); err != nil {
 		return "", fmt.Errorf("解析API响应失败: %w", err)
 	}
 
@@ -127,14 +144,16 @@ func RecognizeSpeech(audioURL string, format string) (string, error) {
 
 // ASRHandler 处理ASR请求的API端点
 func ASRHandler(c *gin.Context) {
-	// 解析请求参数
-	var request ASRRequest
+	var request struct {
+		AudioURL string `json:"audio_url" binding:"required"`
+		Format   string `json:"format,omitempty"`
+	}
+
 	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的请求参数"})
 		return
 	}
 
-	// 识别语音
 	text, err := RecognizeSpeech(request.AudioURL, request.Format)
 	if err != nil {
 		log.Printf("语音识别失败: %v", err)
@@ -142,7 +161,6 @@ func ASRHandler(c *gin.Context) {
 		return
 	}
 
-	// 返回识别结果
 	c.JSON(http.StatusOK, gin.H{
 		"recognized_text": text,
 	})
