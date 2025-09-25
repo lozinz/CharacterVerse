@@ -69,18 +69,6 @@ export const routes = [
       requiresAuth: true,
       description: '应用设置和偏好'
     }
-  },
-  {
-    path: '/voice-demo',
-    element: VoiceDemo,
-    name: 'voiceDemo',
-    title: '语音录音演示',
-    icon: '🎵',
-    showInNav: true,
-    meta: {
-      requiresAuth: false,
-      description: '类似QQ/微信的语音录音波形效果演示'
-    }
   }
 ]
 

@@ -128,7 +128,7 @@ const AudioWorkletVoiceRecorder = ({
         console.log('⏰ 达到最大录音时长，自动停止')
         // 这里不能直接调用 stopRecording，会造成循环依赖
         // 通过 state 来触发停止
-        setIsRecording(false)
+        stopRecording()
       }
     }, 100)
   }, [maxDuration])
@@ -195,54 +195,6 @@ const AudioWorkletVoiceRecorder = ({
         startRecording()
     }
   }, [start, visible, isInitialized, isRecording, hasStartedRecording, startRecording])
-
-  // 处理录音状态变化（用于最大时长自动停止）
-  useEffect(() => {
-    if (!isRecording && recorderRef.current && duration > 0) {
-      // 这是由于达到最大时长而自动停止的情况
-      const handleAutoStop = async () => {
-        try {
-          console.log('⏰ 达到最大时长，自动停止录音')
-          
-          // 如果当前是暂停状态，先恢复录音再停止
-          if (isPaused) {
-            console.log('📝 录音处于暂停状态，先恢复再停止')
-            await recorderRef.current.resumeRecording()
-          }
-          
-          const audioBlob = await recorderRef.current.stopRecording()
-          
-          // 验证录音数据
-          if (!audioBlob || !(audioBlob instanceof Blob) || audioBlob.size === 0) {
-            throw new Error('自动停止时录音数据无效或为空')
-          }
-          
-          console.log('✅ 自动停止录音完成，数据大小:', audioBlob.size, 'bytes')
-          
-          stopTimer()
-          setIsPaused(false)
-          setRecordedBlob(audioBlob)
-          setFrequencyData(null)
-          setVolume(0)
-          
-          onRecordingStop()
-          onRecordingComplete(audioBlob, duration)
-          onClose()
-        } catch (err) {
-          console.error('❌ 自动停止录音失败:', err)
-          setError(err.message || err.toString())
-          
-          // 即使出错也要清理状态
-          stopTimer()
-          setIsPaused(false)
-          setFrequencyData(null)
-          setVolume(0)
-        }
-      }
-      
-      handleAutoStop()
-    }
-  }, [isRecording, isPaused, duration, onRecordingStop, onRecordingComplete, onClose, stopTimer])
 
   // 暂停录音
   const pauseRecording = useCallback(() => {
@@ -338,17 +290,6 @@ const AudioWorkletVoiceRecorder = ({
     // 2. 录音 → 暂停 → 取消 ✅  
     // 3. 直接取消（未开始录音） ✅
     
-    // 取消录音：直接清理状态，不执行录音器操作
-    // 因为我们不关心录音数据，直接丢弃即可
-    console.log('📝 直接清理状态，不执行录音器操作')
-    
-    // 清理所有状态
-    resetRecordingState()
-    
-    // 调用取消回调
-    onRecordingCancel()
-
-    // 如果录音器正在工作，需要停止录音但不获取数据，也不销毁录音器
     if (recorderRef.current && isRecording) {
       try {
         console.log('🛑 取消录音，停止录音器但不保存数据...')
@@ -374,11 +315,17 @@ const AudioWorkletVoiceRecorder = ({
       }
     }
     
+    // 清理组件状态
+    resetRecordingState()
+    
+    // 调用取消回调
+    onRecordingCancel()
+    
     // 关闭 Modal
     onClose()
     
     console.log('✅ 录音已取消')
-  }, [onRecordingCancel, onClose, stopTimer, resetRecordingState])
+  }, [isRecording, onRecordingCancel, onClose, stopTimer, resetRecordingState])
 
   // 格式化时间
   const formatTime = (seconds) => {
