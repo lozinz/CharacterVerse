@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"strings"
@@ -26,11 +27,19 @@ const (
 	MessageTypeVoice = "voice"
 )
 
+// 定义回复类型常量
+const (
+	ResponseTypeText   = 0 // 文字回复
+	ResponseTypeVoice  = 1 // 语音回复
+	ResponseTypeRandom = 2 // 随机回复
+)
+
 type ChatMessage struct {
-	RoleID  uint   `json:"role_id"`
-	Message string `json:"message"`
-	Type    string `json:"type"`             // text 或 voice
-	Format  string `json:"format,omitempty"` // 语音格式，如 mp3, wav
+	RoleID       uint   `json:"role_id"`
+	Message      string `json:"message"`
+	Type         string `json:"type"`             // text 或 voice
+	Format       string `json:"format,omitempty"` // 语音格式，如 mp3, wav
+	ResponseType int    `json:"response_type"`    // 回复类型: 0=文字, 1=语音, 2=随机
 }
 
 type ChatResponse struct {
@@ -98,25 +107,19 @@ func HandleChatSession(conn *websocket.Conn, userID uint) {
 
 // 处理文本消息
 func handleTextMessage(conn *websocket.Conn, userID uint, chatMsg ChatMessage) {
-	response, err := processMessage(userID, chatMsg.RoleID, chatMsg.Message)
+	response, err := processMessage(userID, chatMsg.RoleID, chatMsg.Message, chatMsg.Type, "")
 	if err != nil {
 		sendError(conn, "处理消息失败: "+err.Error())
 		return
 	}
 
-	// 发送文本回复
-	if err := conn.WriteJSON(ChatResponse{
-		RoleID:  chatMsg.RoleID,
-		Message: response,
-		Type:    MessageTypeText,
-	}); err != nil {
-		log.Printf("发送消息错误: %v", err)
-	}
+	// 根据用户期望的回复类型发送响应
+	sendResponseBasedOnType(conn, chatMsg, response)
 }
 
 // 处理语音消息
 func handleVoiceMessage(conn *websocket.Conn, userID uint, chatMsg ChatMessage) {
-	// 1. 直接使用前端提供的URL进行语音识别
+	// 1. 语音识别
 	text, err := RecognizeSpeech(chatMsg.Message, chatMsg.Format)
 	if err != nil {
 		sendError(conn, "语音识别失败: "+err.Error())
@@ -126,14 +129,52 @@ func handleVoiceMessage(conn *websocket.Conn, userID uint, chatMsg ChatMessage) 
 	log.Printf("语音识别结果 (用户ID: %d, 角色ID: %d): %s", userID, chatMsg.RoleID, text)
 
 	// 2. 处理文本消息
-	response, err := processMessage(userID, chatMsg.RoleID, text)
+	response, err := processMessage(userID, chatMsg.RoleID, text, chatMsg.Type, chatMsg.Message)
 	if err != nil {
 		sendError(conn, "处理消息失败: "+err.Error())
 		return
 	}
-	aiResponse := response
 
-	// 3. 语音合成 (TTS)
+	// 3. 根据用户期望的回复类型发送响应
+	sendResponseBasedOnType(conn, chatMsg, response)
+}
+
+// 根据回复类型发送响应
+func sendResponseBasedOnType(conn *websocket.Conn, chatMsg ChatMessage, responseText string) {
+	// 确定最终回复类型
+	responseType := determineResponseType(chatMsg.ResponseType)
+
+	// 根据回复类型处理
+	switch responseType {
+	case ResponseTypeVoice:
+		sendVoiceResponse(conn, chatMsg, responseText)
+	default:
+		// 默认发送文本回复
+		if err := conn.WriteJSON(ChatResponse{
+			RoleID:  chatMsg.RoleID,
+			Message: responseText,
+			Type:    MessageTypeText,
+		}); err != nil {
+			log.Printf("发送消息错误: %v", err)
+		}
+	}
+}
+
+// 确定最终回复类型
+func determineResponseType(requestedType int) int {
+	if requestedType == ResponseTypeRandom {
+		// 随机选择回复类型
+		rand.Seed(time.Now().UnixNano())
+		if rand.Intn(2) == 0 { // 50%概率选择语音
+			return ResponseTypeVoice
+		}
+		return ResponseTypeText
+	}
+	return requestedType
+}
+
+// 发送语音回复
+func sendVoiceResponse(conn *websocket.Conn, chatMsg ChatMessage, responseText string) {
 	// 获取角色信息以确定音色
 	role, err := database.GetRoleByID(chatMsg.RoleID)
 	if err != nil {
@@ -141,18 +182,24 @@ func handleVoiceMessage(conn *websocket.Conn, userID uint, chatMsg ChatMessage) 
 		// 使用默认音色
 		role = &model.Role{
 			Name:      "默认角色",
-			VoiceType: model.VoiceGentleTeacher, // 默认音色
+			VoiceType: "qiniu_zh_female_wwxkjx", // 默认音色
 		}
 	}
 
-	// 使用角色的VoiceType作为音色
-	audioData, err := GenerateQiniuTTS(aiResponse, role.VoiceType, "mp3", 1.0)
+	// 确保VoiceType不为空
+	if role.VoiceType == "" {
+		log.Printf("角色ID %d 的VoiceType为空，使用默认音色", chatMsg.RoleID)
+		role.VoiceType = "qiniu_zh_female_wwxkjx" // 设置默认音色
+	}
+
+	// 语音合成 (TTS)
+	audioData, err := GenerateQiniuTTS(responseText, role.VoiceType, "mp3", 1.0)
 	if err != nil {
 		log.Printf("语音合成失败: %v", err)
 		// 如果TTS失败，回退到文本回复
 		if err := conn.WriteJSON(ChatResponse{
 			RoleID:  chatMsg.RoleID,
-			Message: aiResponse,
+			Message: responseText,
 			Type:    MessageTypeText,
 		}); err != nil {
 			log.Printf("发送消息错误: %v", err)
@@ -160,7 +207,7 @@ func handleVoiceMessage(conn *websocket.Conn, userID uint, chatMsg ChatMessage) 
 		return
 	}
 
-	// 4. 发送语音回复
+	// 发送语音回复
 	if err := conn.WriteJSON(ChatResponse{
 		RoleID:  chatMsg.RoleID,
 		Message: base64.StdEncoding.EncodeToString(audioData),
@@ -172,7 +219,7 @@ func handleVoiceMessage(conn *websocket.Conn, userID uint, chatMsg ChatMessage) 
 }
 
 // 处理消息的核心逻辑
-func processMessage(userID, roleID uint, message string) (string, error) {
+func processMessage(userID, roleID uint, message string, messageType string, voiceURL string) (string, error) {
 	role, err := database.GetRoleByID(roleID)
 	if err != nil {
 		return "", fmt.Errorf("获取角色信息失败: %w", err)
@@ -198,7 +245,7 @@ func processMessage(userID, roleID uint, message string) (string, error) {
 	}
 
 	// 保存聊天记录
-	if err := database.SaveChatMessage(userID, roleID, message, userResponse); err != nil {
+	if err := database.SaveChatMessage(userID, roleID, message, messageType, voiceURL, userResponse); err != nil {
 		log.Printf("保存聊天记录失败: %v", err)
 	}
 

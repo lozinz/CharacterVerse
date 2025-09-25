@@ -33,21 +33,27 @@ func GetChatHistory(userID, roleID uint, limit int) ([]model.ChatHistory, error)
 	return history, nil
 }
 
-func SaveChatMessage(userID, roleID uint, userMsg, aiResponse string) error {
+// 修改后的SaveChatMessage函数
+func SaveChatMessage(userID, roleID uint, userMessage, messageType, voiceURL, aiResponse string) error {
 	// 保存用户消息
 	userHistory := model.ChatHistory{
-		UserID:  userID,
-		RoleID:  roleID,
-		Message: userMsg,
-		IsUser:  true,
+		UserID:      userID,
+		RoleID:      roleID,
+		Message:     userMessage,
+		IsUser:      true,
+		MessageType: messageType,
+		VoiceURL:    voiceURL,
+		ASRText:     userMessage, // 对于语音消息，ASRText是识别后的文本
 	}
 
 	// 保存AI回复
 	aiHistory := model.ChatHistory{
-		UserID:  userID,
-		RoleID:  roleID,
-		Message: aiResponse,
-		IsUser:  false,
+		UserID:      userID,
+		RoleID:      roleID,
+		Message:     aiResponse,
+		IsUser:      false,
+		MessageType: "text", // AI回复总是文本形式存储
+		ASRText:     aiResponse,
 	}
 
 	tx := DB.Begin()
