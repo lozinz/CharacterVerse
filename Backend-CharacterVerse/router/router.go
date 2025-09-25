@@ -20,7 +20,15 @@ func RouterInit(r *gin.Engine) {
 	auth := r.Group("/api")
 	auth.Use(middleware.JWTAuth())
 	{
-		auth.POST("/user/addRole", api.AddRole)
 		auth.GET("/ws/chat", api.ChatHandler)
+
+		roleGroup := auth.Group("/role")
+		{
+			roleGroup.POST("/add", api.AddRole)
+			roleGroup.GET("/list", api.ListRoles)
+			roleGroup.GET("/user/:user_id", api.GetRolesByUserID)
+			roleGroup.DELETE("/:role_id", api.DeleteRole)
+			roleGroup.PUT("/:role_id", api.UpdateRole)
+		}
 	}
 }

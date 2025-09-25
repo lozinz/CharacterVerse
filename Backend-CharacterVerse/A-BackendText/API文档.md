@@ -107,68 +107,32 @@ axios.get('/api/voiceTypes')
   .catch(error => console.error('请求失败:', error));
 ```
 
-## 注意事项
-
-1. 该接口返回的声音类型列表是静态配置的，不会频繁变更
-2. 建议前端在应用启动时调用一次并缓存结果，避免频繁请求
-3. 每个声音类型的 `voice_type` 值在创建角色时需要传递给后端
-4. `sample_url` 字段可用于前端播放声音示例
 
 
-我们正在编写创建角色的API文档，该API的路径是`/api/user/addRole`，需要JWT认证，请求方法为POST。
- 根据提供的代码，请求体是一个JSON对象，包含以下字段：
-   - name: 角色名称（必填）
-   - description: 角色描述（必填）
-   - gender: 角色性别（必填）
-   - age: 角色年龄（必填）
-   - voice_type: 声音类型（必填）
-
- 响应成功时，返回一个包含`role_id`的对象。
-
- 下面我们编写简单明了的API文档，供前端开发者理解。
-
-# `/api/user/addRole` API 文档
+# `/api/role/add` API 文档
 
 ## 接口说明
 
-创建新角色并将其关联到当前登录用户。
+添加新角色到系统。
 
 ### 请求信息
 
 | 属性 | 值 |
 |------|----|
 | **请求方法** | `POST` |
-| **请求路径** | `/api/user/addRole` |
-| **认证要求** | 需要有效的 JWT 令牌 (在 Authorization 头中) |
+| **请求路径** | `/api/role/add` |
+| **认证要求** | 需要有效的JWT令牌 |
 
-### 请求头
+### 请求参数
+JSON格式请求体：
 
-| 头名称 | 值 |
-|--------|----|
-| `Authorization` | `Bearer <your_jwt_token>` |
-| `Content-Type` | `application/json` |
-
-### 请求体 (JSON)
-
-| 字段名 | 类型 | 是否必填 | 说明 |
-|--------|------|----------|------|
-| `name` | string | 是 | 角色名称 |
-| `description` | string | 是 | 角色详细描述 |
-| `gender` | string | 是 | 角色性别 (如: "男", "女", "其他") |
-| `age` | int | 是 | 角色年龄 |
-| `voice_type` | string | 是 | 声音类型标识符 (从 `/api/voiceTypes` 接口获取) |
-
-### 请求示例
-
-```json
-{
-  "name": "AI助手",
-  "description": "一个乐于助人的AI助手，擅长解答各种技术问题",
-  "gender": "男",
-  "age": 25,
-  "voice_type": "qiniu_zh_male_wwxkjx"
-}
-```
+| 字段名 | 类型 | 必填 | 说明 | 约束 |
+|--------|------|------|------|------|
+| `name` | string | 是 | 角色名称 | 长度2-100字符 |
+| `description` | string | 是 | 角色描述 | 长度≥10字符 |
+| `gender` | string | 是 | 性别 | 枚举值: "男", "女", "其他", "未知" |
+| `age` | int | 是 | 年龄 | 0-120之间 |
+| `voice_type` | string | 是 | 声音类型标识符 | 必须为有效声音类型 |
 
 ### 响应格式
 JSON 格式，包含以下字段：
@@ -176,21 +140,21 @@ JSON 格式，包含以下字段：
 | 字段名 | 类型 | 说明 |
 |--------|------|------|
 | `code` | int | 状态码 (200 表示成功) |
-| `message` | string | 状态消息 ("success" 表示成功) |
-| `data` | object | 创建成功的角色信息 |
+| `message` | string | 状态消息 |
+| `data` | object | 包含角色ID的对象 |
 
 ### `data` 对象结构
 
 | 字段名 | 类型 | 说明 |
 |--------|------|------|
-| `role_id` | uint | 新创建角色的唯一标识符 |
+| `role_id` | uint | 新创建角色的ID |
 
 ### 成功响应示例
 
 ```json
 {
   "code": 200,
-  "message": "success",
+  "message": "角色创建成功",
   "data": {
     "role_id": 123
   }
@@ -199,7 +163,291 @@ JSON 格式，包含以下字段：
 
 ### 错误响应示例
 
-#### 认证失败 (401)
+```json
+{
+  "code": 400,
+  "message": "参数错误: 年龄必须在0-120之间",
+  "data": null
+}
+```
+
+## 使用场景
+
+1. **创建新角色**：用户创建自定义角色
+2. **角色管理**：管理员添加预设角色
+3. **角色复制**：基于现有角色创建新角色
+
+## 前端调用示例
+
+```javascript
+// 使用 fetch 调用
+const roleData = {
+  name: "冒险家",
+  description: "勇敢的冒险者，探索未知世界",
+  gender: "男",
+  age: 30,
+  voice_type: "qiniu_zh_male_wwxkjx"
+};
+
+fetch('/api/role/add', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${jwtToken}`
+  },
+  body: JSON.stringify(roleData)
+})
+.then(response => response.json())
+.then(data => {
+  if (data.code === 200) {
+    console.log('角色创建成功，ID:', data.data.role_id);
+  } else {
+    console.error('创建失败:', data.message);
+  }
+})
+.catch(error => console.error('请求失败:', error));
+```
+
+---
+
+# `/api/role/list` API 文档
+
+## 接口说明
+
+获取系统中所有角色的分页列表。
+
+### 请求信息
+
+| 属性         | 值                |
+| ------------ | ----------------- |
+| **请求方法** | `GET`             |
+| **请求路径** | `/api/role/list`  |
+| **认证要求** | 需要有效的JWT令牌 |
+
+### 请求参数
+查询参数：
+
+| 字段名      | 类型 | 必填 | 说明     | 默认值 |
+| ----------- | ---- | ---- | -------- | ------ |
+| `page`      | int  | 否   | 页码     | 1      |
+| `page_size` | int  | 否   | 每页数量 | 10     |
+
+### 响应格式
+JSON 格式，包含以下字段：
+
+| 字段名    | 类型   | 说明                  |
+| --------- | ------ | --------------------- |
+| `code`    | int    | 状态码 (200 表示成功) |
+| `message` | string | 状态消息              |
+| `data`    | object | 分页结果对象          |
+
+### `data` 对象结构
+
+| 字段名     | 类型  | 说明         |
+| ---------- | ----- | ------------ |
+| `total`    | int64 | 总记录数     |
+| `list`     | array | 角色对象列表 |
+| `page`     | int   | 当前页码     |
+| `pages`    | int   | 总页数       |
+| `has_more` | bool  | 是否有下一页 |
+
+### 角色对象结构
+
+| 字段名        | 类型   | 说明              |
+| ------------- | ------ | ----------------- |
+| `id`          | uint   | 角色ID            |
+| `name`        | string | 角色名称          |
+| `description` | string | 角色描述          |
+| `gender`      | string | 性别              |
+| `age`         | int    | 年龄              |
+| `voice_type`  | string | 声音类型标识符    |
+| `created_at`  | string | 创建时间(ISO格式) |
+
+### 成功响应示例
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "total": 45,
+    "list": [
+      {
+        "id": 1,
+        "name": "冒险家",
+        "description": "勇敢的冒险者，探索未知世界",
+        "gender": "男",
+        "age": 30,
+        "voice_type": "qiniu_zh_male_wwxkjx",
+        "created_at": "2025-09-25T10:30:00Z"
+      },
+      {
+        "id": 2,
+        "name": "魔法师",
+        "description": "掌握古老魔法的智者",
+        "gender": "女",
+        "age": 120,
+        "voice_type": "qiniu_zh_female_wwxkjx",
+        "created_at": "2025-09-24T14:20:00Z"
+      }
+    ],
+    "page": 1,
+    "pages": 5,
+    "has_more": true
+  }
+}
+```
+
+## 使用场景
+
+1. **角色浏览**：用户查看所有可用角色
+2. **角色选择**：在对话前选择角色
+3. **角色管理**：管理员查看角色列表
+
+## 前端调用示例
+
+```javascript
+// 使用 axios 调用
+axios.get('/api/role/list', {
+  params: {
+    page: 2,
+    page_size: 5
+  },
+  headers: {
+    'Authorization': `Bearer ${jwtToken}`
+  }
+})
+.then(response => {
+  if (response.data.code === 200) {
+    console.log('角色列表:', response.data.data.list);
+    console.log('总页数:', response.data.data.pages);
+  } else {
+    console.error('获取失败:', response.data.message);
+  }
+})
+.catch(error => console.error('请求失败:', error));
+```
+
+---
+
+# `/api/role/user/:user_id` API 文档
+
+## 接口说明
+
+获取指定用户创建的角色分页列表。
+
+### 请求信息
+
+| 属性         | 值                         |
+| ------------ | -------------------------- |
+| **请求方法** | `GET`                      |
+| **请求路径** | `/api/role/user/{user_id}` |
+| **认证要求** | 需要有效的JWT令牌          |
+
+### 路径参数
+
+| 字段名    | 类型 | 说明   |
+| --------- | ---- | ------ |
+| `user_id` | uint | 用户ID |
+
+### 查询参数
+
+| 字段名      | 类型 | 必填 | 说明     | 默认值 |
+| ----------- | ---- | ---- | -------- | ------ |
+| `page`      | int  | 否   | 页码     | 1      |
+| `page_size` | int  | 否   | 每页数量 | 10     |
+
+### 响应格式
+JSON 格式，包含以下字段：
+
+| 字段名    | 类型   | 说明                  |
+| --------- | ------ | --------------------- |
+| `code`    | int    | 状态码 (200 表示成功) |
+| `message` | string | 状态消息              |
+| `data`    | object | 分页结果对象          |
+
+### `data` 对象结构
+
+| 字段名     | 类型  | 说明         |
+| ---------- | ----- | ------------ |
+| `total`    | int64 | 总记录数     |
+| `list`     | array | 角色对象列表 |
+| `page`     | int   | 当前页码     |
+| `pages`    | int   | 总页数       |
+| `has_more` | bool  | 是否有下一页 |
+
+### 角色对象结构
+同`/api/role/list`接口
+
+### 成功响应示例
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "total": 8,
+    "list": [
+      {
+        "id": 101,
+        "name": "我的助手",
+        "description": "个人AI助手",
+        "gender": "未知",
+        "age": 0,
+        "voice_type": "qiniu_zh_female_wwxkjx",
+        "created_at": "2025-09-20T09:15:00Z"
+      }
+    ],
+    "page": 1,
+    "pages": 1,
+    "has_more": false
+  }
+}
+```
+
+## 使用场景
+
+1. **用户角色管理**：查看自己创建的角色
+2. **角色分享**：查看其他用户创建的角色
+3. **用户分析**：分析用户的角色创建偏好
+
+## 前端调用示例
+
+```javascript
+const userId = 123; // 目标用户ID
+
+// 使用 fetch 调用
+fetch(`/api/role/user/${userId}?page=1&page_size=5`, {
+  method: 'GET',
+  headers: {
+    'Authorization': `Bearer ${jwtToken}`
+  }
+})
+.then(response => response.json())
+.then(data => {
+  if (data.code === 200) {
+    console.log('用户角色列表:', data.data.list);
+  } else {
+    console.error('获取失败:', data.message);
+  }
+})
+.catch(error => console.error('请求失败:', error));
+```
+
+---
+
+## 通用错误响应
+
+所有API共享以下错误响应格式：
+
+| 状态码 | 含义           | 可能原因           |
+| ------ | -------------- | ------------------ |
+| 400    | 错误请求       | 参数缺失或格式错误 |
+| 401    | 未授权         | JWT令牌无效或缺失  |
+| 403    | 禁止访问       | 用户无权访问资源   |
+| 404    | 未找到         | 用户或角色不存在   |
+| 500    | 服务器内部错误 | 数据库或服务异常   |
+
 ```json
 {
   "code": 401,
@@ -208,86 +456,147 @@ JSON 格式，包含以下字段：
 }
 ```
 
-#### 参数错误 (400)
+### `/api/role/:role_id` (DELETE) - 删除角色
+
+#### 接口说明
+删除指定ID的角色，只能删除自己创建的角色
+
+#### 请求信息
+| 属性         | 值                    |
+| ------------ | --------------------- |
+| **请求方法** | `DELETE`              |
+| **请求路径** | `/api/role/{role_id}` |
+| **认证要求** | 需要有效的JWT令牌     |
+
+#### 路径参数
+| 字段名    | 类型 | 说明   |
+| --------- | ---- | ------ |
+| `role_id` | uint | 角色ID |
+
+#### 响应格式
+JSON 格式，包含以下字段：
+| 字段名    | 类型   | 说明                  |
+| --------- | ------ | --------------------- |
+| `code`    | int    | 状态码 (200 表示成功) |
+| `message` | string | 状态消息              |
+| `data`    | object | 空对象                |
+
+#### 成功响应示例
+```json
+{
+  "code": 200,
+  "message": "角色删除成功",
+  "data": null
+}
+```
+
+#### 错误响应示例
+```json
+{
+  "code": 403,
+  "message": "角色不存在或您无权删除此角色",
+  "data": null
+}
+```
+
+### `/api/role/:role_id` (PUT) - 更新角色
+
+#### 接口说明
+更新指定ID的角色信息，只能更新自己创建的角色
+
+#### 请求信息
+| 属性         | 值                    |
+| ------------ | --------------------- |
+| **请求方法** | `PUT`                 |
+| **请求路径** | `/api/role/{role_id}` |
+| **认证要求** | 需要有效的JWT令牌     |
+
+#### 路径参数
+| 字段名    | 类型 | 说明   |
+| --------- | ---- | ------ |
+| `role_id` | uint | 角色ID |
+
+#### 请求参数
+JSON格式请求体（可更新部分字段）：
+| 字段名        | 类型   | 必填 | 说明           | 约束                               |
+| ------------- | ------ | ---- | -------------- | ---------------------------------- |
+| `name`        | string | 否   | 角色名称       | 长度2-100字符                      |
+| `description` | string | 否   | 角色描述       | 长度≥10字符                        |
+| `gender`      | string | 否   | 性别           | 枚举值: "男", "女", "其他", "未知" |
+| `age`         | int    | 否   | 年龄           | 0-120之间                          |
+| `voice_type`  | string | 否   | 声音类型标识符 | 必须为有效声音类型                 |
+
+#### 响应格式
+JSON 格式，包含以下字段：
+| 字段名    | 类型   | 说明                  |
+| --------- | ------ | --------------------- |
+| `code`    | int    | 状态码 (200 表示成功) |
+| `message` | string | 状态消息              |
+| `data`    | object | 空对象                |
+
+#### 成功响应示例
+```json
+{
+  "code": 200,
+  "message": "角色更新成功",
+  "data": null
+}
+```
+
+#### 错误响应示例
 ```json
 {
   "code": 400,
-  "message": "参数错误: Key: 'AddRoleRequest.Name' Error:Field validation for 'Name' failed on the 'required' tag",
+  "message": "参数错误: 年龄必须在0-120之间",
   "data": null
 }
 ```
-
-#### 服务器错误 (500)
-```json
-{
-  "code": 500,
-  "message": "数据库操作失败",
-  "data": null
-}
-```
-
-## 使用场景
-
-1. **创建新角色**：用户创建自定义角色
-2. **角色管理**：在用户角色列表中新增角色
-3. **角色分享**：创建角色后可以分享给其他用户
 
 ## 前端调用示例
 
+### 删除角色
 ```javascript
-// 使用 axios 调用
-const createRole = async (roleData) => {
-  try {
-    const token = localStorage.getItem('jwt_token'); // 从本地存储获取 JWT
-    const response = await axios.post('/api/user/addRole', roleData, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-    
-    if (response.data.code === 200) {
-      console.log('角色创建成功，ID:', response.data.data.role_id);
-      return response.data.data.role_id;
-    } else {
-      console.error('角色创建失败:', response.data.message);
-      return null;
-    }
-  } catch (error) {
-    console.error('请求失败:', error);
-    return null;
-  }
-};
+const roleId = 123; // 要删除的角色ID
 
-// 调用示例
-const newRole = {
-  name: "AI助手",
-  description: "一个乐于助人的AI助手，擅长解答各种技术问题",
-  gender: "男",
-  age: 25,
-  voice_type: "qiniu_zh_male_wwxkjx"
-};
-
-createRole(newRole).then(roleId => {
-  if (roleId) {
-    // 创建成功后的操作
-    console.log("新角色ID:", roleId);
+// 使用 fetch 调用
+fetch(`/api/role/${roleId}`, {
+  method: 'DELETE',
+  headers: {
+    'Authorization': `Bearer ${jwtToken}`
   }
-});
+})
+.then(response => response.json())
+.then(data => {
+  if (data.code === 200) {
+    console.log('删除成功');
+  } else {
+    console.error('删除失败:', data.message);
+  }
+})
+.catch(error => console.error('请求失败:', error));
 ```
 
-## 注意事项
+### 更新角色
+```javascript
+const roleId = 123; // 要更新的角色ID
+const updateData = {
+  name: "新角色名称",
+  description: "更新后的角色描述",
+  age: 35
+};
 
-1. **认证要求**：必须提供有效的 JWT 令牌
-2. **参数验证**：
-   - 所有字段都是必填项
-   - `age` 必须是正整数
-   - `voice_type` 必须是有效的音色标识符
-3. **角色数量限制**：每个用户最多可创建 50 个角色（根据业务规则）
-4. **响应处理**：
-   - 成功响应中包含新角色的 ID
-   - 角色 ID 用于后续的角色管理操作（编辑、删除、对话等）
-5. **错误处理**：
-   - 400 错误通常表示参数缺失或格式错误
-   - 401 错误表示认证失败或令牌过期
-   - 500 错误表示服务器内部错误，需要联系管理员
+// 使用 axios 调用
+axios.put(`/api/role/${roleId}`, updateData, {
+  headers: {
+    'Authorization': `Bearer ${jwtToken}`
+  }
+})
+.then(response => {
+  if (response.data.code === 200) {
+    console.log('更新成功');
+  } else {
+    console.error('更新失败:', response.data.message);
+  }
+})
+.catch(error => console.error('请求失败:', error));
+```
