@@ -52,7 +52,8 @@ func SaveChatMessage(userID, roleID uint, userMessage, messageType, voiceURL, ai
 		RoleID:      roleID,
 		Message:     aiResponse,
 		IsUser:      false,
-		MessageType: "text", // AI回复总是文本形式存储
+		MessageType: messageType,
+		VoiceURL:    voiceURL,
 		ASRText:     aiResponse,
 	}
 
@@ -68,4 +69,43 @@ func SaveChatMessage(userID, roleID uint, userMessage, messageType, voiceURL, ai
 	}
 
 	return tx.Commit().Error
+}
+func SaveUserMessage(userID, roleID uint, message, messageType, voiceURL string) error {
+	history := model.ChatHistory{
+		UserID:      userID,
+		RoleID:      roleID,
+		Message:     message,
+		IsUser:      true,
+		MessageType: messageType,
+		VoiceURL:    voiceURL,
+		ASRText:     message,
+	}
+	return DB.Create(&history).Error
+}
+
+// 保存AI文本消息
+func SaveAITextMessage(userID, roleID uint, message string) error {
+	history := model.ChatHistory{
+		UserID:      userID,
+		RoleID:      roleID,
+		Message:     message,
+		IsUser:      false,
+		MessageType: "text",
+		ASRText:     message,
+	}
+	return DB.Create(&history).Error
+}
+
+// 保存AI语音消息
+func SaveAIVoiceMessage(userID, roleID uint, asrText, voiceURL string) error {
+	history := model.ChatHistory{
+		UserID:      userID,
+		RoleID:      roleID,
+		Message:     voiceURL, // 存储语音URL
+		IsUser:      false,
+		MessageType: "voice",
+		VoiceURL:    voiceURL,
+		ASRText:     asrText,
+	}
+	return DB.Create(&history).Error
 }

@@ -4,13 +4,13 @@ import (
 	"Backend-CharacterVerse/database"
 	"Backend-CharacterVerse/model"
 	"bytes"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log"
 	"math/rand"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"strings"
@@ -35,6 +35,7 @@ const (
 )
 
 type ChatMessage struct {
+	UserID       uint   `json:"user_id"`
 	RoleID       uint   `json:"role_id"`
 	Message      string `json:"message"`
 	Type         string `json:"type"`             // text 或 voice
@@ -173,6 +174,67 @@ func determineResponseType(requestedType int) int {
 	return requestedType
 }
 
+// 上传语音文件到服务器
+func uploadVoiceToServer(audioData []byte) (string, error) {
+	// 创建表单数据
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	// 添加文件字段
+	part, err := writer.CreateFormFile("file", "tts_audio.mp3")
+	if err != nil {
+		return "", fmt.Errorf("创建表单文件失败: %w", err)
+	}
+
+	if _, err := part.Write(audioData); err != nil {
+		return "", fmt.Errorf("写入音频数据失败: %w", err)
+	}
+
+	// 关闭writer
+	if err := writer.Close(); err != nil {
+		return "", fmt.Errorf("关闭表单写入器失败: %w", err)
+	}
+
+	// 创建HTTP请求
+	req, err := http.NewRequest("POST", "https://ai.mcell.top/api/upload_voice", body)
+	if err != nil {
+		return "", fmt.Errorf("创建上传请求失败: %w", err)
+	}
+
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	// 发送请求
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("上传请求失败: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// 检查响应状态
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("上传失败，状态码: %d", resp.StatusCode)
+	}
+
+	// 解析响应
+	var response struct {
+		Message  string `json:"message"`
+		Filename string `json:"filename"`
+		URL      string `json:"url"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return "", fmt.Errorf("解析上传响应失败: %w", err)
+	}
+
+	if response.Message != "文件上传成功" {
+		return "", errors.New("上传失败: " + response.Message)
+	}
+
+	// 返回完整的URL
+	return "https://ai.mcell.top" + response.URL, nil
+}
+
 // 发送语音回复
 func sendVoiceResponse(conn *websocket.Conn, chatMsg ChatMessage, responseText string) {
 	// 获取角色信息以确定音色
@@ -204,13 +266,56 @@ func sendVoiceResponse(conn *websocket.Conn, chatMsg ChatMessage, responseText s
 		}); err != nil {
 			log.Printf("发送消息错误: %v", err)
 		}
+
+		// 保存AI文本回复
+		if err := database.SaveAITextMessage(
+			chatMsg.UserID,
+			chatMsg.RoleID,
+			responseText,
+		); err != nil {
+			log.Printf("保存AI文本消息失败: %v", err)
+		}
 		return
 	}
 
-	// 发送语音回复
+	// 上传语音文件并获取URL
+	voiceURL, err := uploadVoiceToServer(audioData)
+	if err != nil {
+		log.Printf("语音上传失败: %v", err)
+		// 如果上传失败，回退到文本回复
+		if err := conn.WriteJSON(ChatResponse{
+			RoleID:  chatMsg.RoleID,
+			Message: responseText,
+			Type:    MessageTypeText,
+		}); err != nil {
+			log.Printf("发送消息错误: %v", err)
+		}
+
+		// 保存AI文本回复
+		if err := database.SaveAITextMessage(
+			chatMsg.UserID,
+			chatMsg.RoleID,
+			responseText,
+		); err != nil {
+			log.Printf("保存AI文本消息失败: %v", err)
+		}
+		return
+	}
+
+	// 保存AI语音消息到数据库（只在这里保存一次）
+	if err := database.SaveAIVoiceMessage(
+		chatMsg.UserID,
+		chatMsg.RoleID,
+		responseText,
+		voiceURL,
+	); err != nil {
+		log.Printf("保存AI语音消息失败: %v", err)
+	}
+
+	// 发送语音回复给前端（返回语音URL而不是base64数据）
 	if err := conn.WriteJSON(ChatResponse{
 		RoleID:  chatMsg.RoleID,
-		Message: base64.StdEncoding.EncodeToString(audioData),
+		Message: voiceURL, // 返回语音URL
 		Type:    MessageTypeVoice,
 		Format:  "mp3",
 	}); err != nil {
@@ -244,9 +349,15 @@ func processMessage(userID, roleID uint, message string, messageType string, voi
 		return "", fmt.Errorf("调用大模型获取回复失败: %w", err)
 	}
 
-	// 保存聊天记录
-	if err := database.SaveChatMessage(userID, roleID, message, messageType, voiceURL, userResponse); err != nil {
-		log.Printf("保存聊天记录失败: %v", err)
+	// 保存用户消息（不保存AI回复）
+	if err := database.SaveUserMessage(
+		userID,
+		roleID,
+		message,
+		messageType,
+		voiceURL,
+	); err != nil {
+		log.Printf("保存用户消息失败: %v", err)
 	}
 
 	// 第二步：生成摘要
