@@ -972,3 +972,220 @@ function playVoice(voiceURL) {
   chatContainer.appendChild(audioPlayer);
 }
 ```
+
+
+
+
+我们正在编写语音通话功能的API文档，包括WebSocket连接建立后，前端发送的消息格式和后端返回的消息格式。
+ 根据代码，前端发送的消息结构为VoiceChatMessage，后端返回的消息结构为VoiceChatResponse。
+
+ 前端发送的消息：
+   type VoiceChatMessage struct {
+        RoleID   uint   `json:"role_id"`
+        VoiceURL string `json:"voice_url"` // 语音文件URL
+        Format   string `json:"format"`    // 语音格式 (mp3, wav等)
+   }
+
+ 后端返回的消息：
+   type VoiceChatResponse struct {
+        Type    string `json:"type"`     // "audio" 或 "error"
+        Data    string `json:"data"`     // base64编码的音频数据或错误信息
+        Format  string `json:"format"`   // 音频格式
+        IsFinal bool   `json:"is_final"` // 是否是最后一个片段
+   }
+
+ 此外，我们还需要说明WebSocket连接的URL和认证方式。
+
+ 根据路由设置：auth.GET("/ws/voice_chat", api.VoiceChatHandler)
+ 所以完整的WebSocket URL为：wss://<domain>/api/ws/voice_chat （生产环境）或 ws://<domain>/api/ws/voice_chat （开发环境）
+
+ 认证方式：在建立连接时，需要在请求头中携带JWT Token（Bearer Token）。具体在代码中，我们使用了JWTAuth中间件，所以前端需要在请求头中设置：
+   Authorization: Bearer <token>
+
+ 现在，我们按照API文档的格式来编写。
+
+# 语音通话 WebSocket API 文档
+
+## 概述
+本 API 提供实时语音通话功能，允许用户与 AI 角色进行语音对话。基于 WebSocket 协议实现双向通信。
+
+## 认证方式
+- **认证类型**: JWT (JSON Web Token)
+- **请求头**: `Authorization: Bearer <token>`
+- **认证路由**: `/api/ws/voice_chat`
+
+## WebSocket 连接
+- **URL**: `wss://<your-domain>/api/ws/voice_chat`
+- **协议**: WebSocket
+- **连接要求**:
+  - 必须携带有效的 JWT Token
+  - 客户端应支持 WebSocket 协议
+
+## 消息格式
+所有消息均使用 JSON 格式传输
+
+### 客户端 → 服务端消息
+用户发送语音消息给服务端：
+
+```json
+{
+  "role_id": 123,       // 角色ID (uint)
+  "voice_url": "https://example.com/audio.mp3", // 语音文件URL
+  "format": "mp3"        // 语音格式 (mp3, wav等)
+}
+```
+
+字段说明:
+- `role_id`: 用户选择的角色ID
+- `voice_url`: 语音文件的公开访问URL
+- `format`: 语音文件格式，支持 mp3, wav 等常见格式
+
+### 服务端 → 客户端消息
+服务端返回语音响应给客户端：
+
+```json
+{
+  "type": "audio",       // 消息类型: "audio" 或 "error"
+  "data": "base64...",   // base64编码的音频数据
+  "format": "mp3",       // 音频格式
+  "is_final": false      // 是否是最后一个片段
+}
+```
+
+字段说明:
+- `type`: 
+  - `audio`: 音频数据
+  - `error`: 错误信息
+- `data`: 
+  - 当 `type=audio` 时: base64 编码的音频数据
+  - 当 `type=error` 时: 错误描述文本
+- `format`: 音频格式 (通常为 mp3)
+- `is_final`: 标识是否为当前语音响应的最后一个片段
+
+## 通信流程
+
+```mermaid
+sequenceDiagram
+    participant Client as 客户端
+    participant Server as 服务端
+    participant ASR as 语音识别服务
+    participant LLM as 大语言模型
+    participant TTS as 语音合成服务
+
+    Client->>Server: 建立WebSocket连接 (携带JWT)
+    Server-->>Client: 连接成功 (200 OK)
+    
+    loop 语音对话循环
+        Client->>Server: 发送语音消息 (JSON)
+        Server->>ASR: 语音识别请求
+        ASR-->>Server: 识别文本
+        Server->>LLM: 生成回复文本
+        LLM-->>Server: 回复文本
+        Server->>TTS: 语音合成请求
+        TTS->>Server: 流式音频片段
+        Server->>Client: 发送音频片段 (JSON)
+        Server->>Client: ... (多个片段)
+        Server->>Client: 发送最终片段 (is_final=true)
+    end
+    
+    Client->>Server: 关闭连接
+    Server-->>Client: 关闭确认
+```
+
+## 错误处理
+
+### 连接错误
+| 状态码 | 描述                     |
+| ------ | ------------------------ |
+| 401    | 未授权 (缺少或无效的JWT) |
+| 500    | WebSocket升级失败        |
+
+### 消息错误
+当服务端处理消息出错时，会返回错误消息：
+
+```json
+{
+  "type": "error",
+  "data": "错误描述信息",
+  "format": "",
+  "is_final": true
+}
+```
+
+常见错误原因:
+- 消息格式错误
+- 语音识别失败
+- 角色信息获取失败
+- 大模型调用失败
+- 语音合成失败
+
+## 示例代码
+
+### 客户端连接示例 (JavaScript)
+
+```javascript
+const connectVoiceChat = async () => {
+  const token = "your_jwt_token_here";
+  const socket = new WebSocket(`wss://your-domain.com/api/ws/voice_chat`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  socket.onopen = () => {
+    console.log("语音通话连接已建立");
+    
+    // 发送语音消息
+    const message = {
+      role_id: 8, // 角色ID
+      voice_url: "https://example.com/user-audio.mp3",
+      format: "mp3"
+    };
+    socket.send(JSON.stringify(message));
+  };
+
+  socket.onmessage = (event) => {
+    const response = JSON.parse(event.data);
+    
+    if (response.type === "audio") {
+      // 处理音频片段
+      const audioData = atob(response.data);
+      playAudioChunk(audioData, response.format);
+      
+      if (response.is_final) {
+        console.log("收到完整语音回复");
+      }
+    } else if (response.type === "error") {
+      console.error("语音通话错误:", response.data);
+    }
+  };
+
+  socket.onclose = (event) => {
+    console.log("语音通话已结束", event.code, event.reason);
+  };
+
+  socket.onerror = (error) => {
+    console.error("WebSocket错误:", error);
+  };
+};
+
+// 播放音频片段
+const playAudioChunk = (audioData, format) => {
+  // 实现音频播放逻辑
+};
+```
+
+### 服务端处理流程
+1. 接收客户端语音消息
+2. 调用语音识别服务 (ASR) 转换为文本
+3. 获取角色信息
+4. 结合历史对话生成上下文
+5. 调用大语言模型 (LLM) 生成回复文本
+6. 调用语音合成服务 (TTS) 生成语音
+7. 流式返回语音片段给客户端
+8. 异步更新对话摘要
+
+## 注意事项
+1. 语音文件 URL 必须可公开访问
+2. 单次语音消息时长建议不超过 60 秒
+3. 客户端应处理音频片段的拼接和播放
+4. 服务端会维护对话上下文，提供连续对话体验
+5. 连接超时时间为 5 分钟，无活动会自动断开
