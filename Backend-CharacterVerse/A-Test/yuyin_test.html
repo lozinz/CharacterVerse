@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>语音通话功能测试 - 流式优化版</title>
+    <title>语音通话功能测试 - 队列播放优化版</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -118,7 +118,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>语音通话功能测试 - 流式优化版</h1>
+        <h1>语音通话功能测试 - 队列播放优化版</h1>
         
         <div class="input-group">
             <label for="jwt">JWT Token:</label>
@@ -167,18 +167,15 @@
         let audioContext;
         let lastNetworkLatency = 0;
         let bufferSizeHistory = [];
-        let audioBufferQueue = [];
         let isPlaying = false;
-        let audioSource;
-        let playbackQueue = [];
-        let currentPlaybackNode = null;
         let latencyHistory = [];
-        let latencyGraph;
-        let playbackStartTime = 0;
-        let lastAudioDuration = 0;
-        let bufferSafetyThreshold = 0.5;
         let bufferCheckInterval;
         let latencyGraphInterval;
+        
+        // 音频队列管理
+        let audioQueue = []; // 存储所有接收到的音频片段
+        let isFinalReceived = false; // 是否收到结束标记
+        let currentAudioSource = null; // 当前播放的音频源
         
         // DOM元素
         const jwtInput = document.getElementById('jwt');
@@ -209,7 +206,7 @@
         
         // 更新性能信息
         function updatePerformanceInfo() {
-            const bufferSize = playbackQueue.length;
+            const bufferSize = audioQueue.length;
             const status = isPlaying ? '播放中' : '空闲';
             const avgBuffer = bufferSizeHistory.length > 0 ? 
                 Math.round(bufferSizeHistory.reduce((a, b) => a + b, 0) / bufferSizeHistory.length) : 0;
@@ -291,7 +288,7 @@
                 
                 // 开始性能监控
                 bufferCheckInterval = setInterval(() => {
-                    bufferSizeHistory.push(playbackQueue.length);
+                    bufferSizeHistory.push(audioQueue.length);
                     if (bufferSizeHistory.length > 10) bufferSizeHistory.shift();
                     updatePerformanceInfo();
                 }, 500);
@@ -315,14 +312,22 @@
                         
                         addLog(`收到音频片段 (格式: ${response.format}, 长度: ${response.data.length}字节, 延迟: ${lastNetworkLatency}ms)`);
                         
-                        // 添加到处理队列
-                        audioBufferQueue.push({
+                        // 添加到音频队列
+                        audioQueue.push({
                             data: response.data,
                             isFinal: response.isFinal
                         });
                         
-                        // 处理队列中的音频
-                        processAudioQueue();
+                        // 如果是结束标记
+                        if (response.isFinal) {
+                            isFinalReceived = true;
+                            addLog('收到结束标记');
+                        }
+                        
+                        // 如果没有在播放，开始播放
+                        if (!isPlaying) {
+                            playNextAudio();
+                        }
                         
                     } else if (response.type === 'error') {
                         addLog(`错误: ${response.data}`);
@@ -351,7 +356,9 @@
         function initAudioContext() {
             try {
                 if (!audioContext) {
-                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                        latencyHint: 'playback'
+                    });
                     addLog(`Web Audio API已初始化 (采样率: ${audioContext.sampleRate}Hz)`);
                 }
                 return audioContext;
@@ -361,12 +368,14 @@
             }
         }
         
-        // 处理音频队列
-        async function processAudioQueue() {
-            if (!audioContext || audioBufferQueue.length === 0) return;
+        // 播放下一个音频片段
+        function playNextAudio() {
+            if (!audioContext || audioQueue.length === 0 || isPlaying) {
+                return;
+            }
             
             try {
-                const audioItem = audioBufferQueue.shift();
+                const audioItem = audioQueue.shift();
                 const base64Data = audioItem.data;
                 
                 // 解码base64音频数据
@@ -378,81 +387,60 @@
                 const byteArray = new Uint8Array(byteNumbers);
                 
                 // 解码音频数据
-                const audioBuffer = await audioContext.decodeAudioData(byteArray.buffer);
-                lastAudioDuration = audioBuffer.duration;
-                
-                // 添加到播放队列
-                playbackQueue.push({
-                    buffer: audioBuffer,
-                    isFinal: audioItem.isFinal
-                });
-                
-                addLog(`音频解码成功 (时长: ${audioBuffer.duration.toFixed(2)}秒)`);
-                
-                // 如果没有在播放，开始播放
-                if (!isPlaying) {
-                    playNextAudio();
-                }
-                
-                // 继续处理队列
-                if (audioBufferQueue.length > 0) {
-                    setTimeout(processAudioQueue, 10);
-                }
-                
-            } catch (error) {
-                addLog(`音频处理错误: ${error.message}`);
-            }
-        }
-        
-        // 播放下一个音频片段
-        function playNextAudio() {
-            if (playbackQueue.length === 0) {
-                isPlaying = false;
-                updateStatus('播放完成');
-                return;
-            }
-            
-            try {
-                const audioItem = playbackQueue.shift();
-                const audioBuffer = audioItem.buffer;
-                
-                isPlaying = true;
-                updateStatus('播放中...');
-                
-                // 创建音频源
-                const source = audioContext.createBufferSource();
-                source.buffer = audioBuffer;
-                
-                // 连接到输出
-                source.connect(audioContext.destination);
-                
-                // 记录开始时间
-                playbackStartTime = audioContext.currentTime;
-                
-                // 播放音频
-                source.start();
-                
-                // 设置播放结束回调
-                source.onended = () => {
-                    addLog(`音频片段播放完成 (时长: ${audioBuffer.duration.toFixed(2)}秒)`);
-                    
-                    // 检查是否是最后一个片段
-                    if (audioItem.isFinal) {
-                        addLog('接收到结束标记，播放完成');
+                audioContext.decodeAudioData(byteArray.buffer)
+                    .then(audioBuffer => {
+                        isPlaying = true;
+                        updateStatus('播放中...');
+                        
+                        // 创建音频源
+                        currentAudioSource = audioContext.createBufferSource();
+                        currentAudioSource.buffer = audioBuffer;
+                        
+                        // 连接到输出
+                        currentAudioSource.connect(audioContext.destination);
+                        
+                        // 播放音频
+                        currentAudioSource.start();
+                        
+                        // 设置播放结束回调
+                        currentAudioSource.onended = () => {
+                            addLog(`音频片段播放完成 (时长: ${audioBuffer.duration.toFixed(2)}秒)`);
+                            isPlaying = false;
+                            
+                            // 检查是否是最后一个片段
+                            if (audioItem.isFinal || isFinalReceived) {
+                                updateStatus('播放完成');
+                                isFinalReceived = false;
+                            } else if (audioQueue.length > 0) {
+                                // 播放下一个片段
+                                setTimeout(playNextAudio, 0);
+                            } else {
+                                updateStatus('等待更多数据...');
+                            }
+                        };
+                        
+                        addLog(`开始播放音频片段 (时长: ${audioBuffer.duration.toFixed(2)}秒)`);
+                    })
+                    .catch(error => {
+                        addLog(`音频解码错误: ${error.message}`);
                         isPlaying = false;
-                        updateStatus('播放完成');
-                    } else {
-                        // 播放下一个片段
-                        setTimeout(playNextAudio, 0);
-                    }
-                };
-                
-                addLog(`开始播放音频片段 (时长: ${audioBuffer.duration.toFixed(2)}秒)`);
+                        updateStatus('解码失败');
+                        
+                        // 尝试播放下一个片段
+                        if (audioQueue.length > 0) {
+                            setTimeout(playNextAudio, 0);
+                        }
+                    });
                 
             } catch (error) {
                 addLog(`播放错误: ${error.message}`);
-                updateStatus('播放失败');
                 isPlaying = false;
+                updateStatus('播放失败');
+                
+                // 尝试播放下一个片段
+                if (audioQueue.length > 0) {
+                    setTimeout(playNextAudio, 0);
+                }
             }
         }
         
@@ -543,6 +531,20 @@
             if (mediaRecorder) mediaRecorder.stop();
             clearInterval(bufferCheckInterval);
             clearInterval(latencyGraphInterval);
+            
+            // 停止当前播放
+            if (currentAudioSource) {
+                currentAudioSource.stop();
+            }
+        });
+        
+        // 自动播放策略
+        document.addEventListener('click', () => {
+            if (audioContext && audioContext.state === 'suspended') {
+                audioContext.resume().then(() => {
+                    addLog('用户交互后恢复音频上下文');
+                });
+            }
         });
     </script>
 </body>
