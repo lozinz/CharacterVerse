@@ -22,7 +22,7 @@ const CharacterCard = ({
         type="text" 
         icon={character.favorited ? <StarFilled style={{ color: '#faad14' }} /> : <StarOutlined />}
         onClick={() => onToggleFavorite?.(character.id)}
-        size="small"
+        size="middle"
       />
     ),
     // TODO: 添加编辑按钮
@@ -32,19 +32,18 @@ const CharacterCard = ({
         type="text" 
         icon={<EditOutlined />}
         onClick={() => onEdit?.(character)}
-        size="small"
+        size="middle"
       />
     ),
     // TODO: 添加聊天按钮
     onChat && (
       <Button 
         key="chat"
-        type="primary" 
+        type="text" 
         icon={<MessageOutlined />}
         onClick={() => onChat?.(character)}
-        size="small"
+        size="middle"
       >
-        聊天
       </Button>
     ),
     // TODO: 添加删除按钮
@@ -60,7 +59,7 @@ const CharacterCard = ({
           type="text" 
           danger
           icon={<DeleteOutlined />}
-          size="small"
+          size="middle"
         />
       </Popconfirm>
     )
@@ -75,8 +74,11 @@ const CharacterCard = ({
     >
       <Meta
         avatar={
-          <Avatar size={48} style={{ fontSize: '1.5rem', backgroundColor: '#1890ff' }}>
-            {character.avatar || character.name?.charAt(0) || '👤'}
+          <Avatar size={48} 
+            style={{ fontSize: '1.5rem' }}
+            src={character.avatar_url?.startsWith('http') ? character.avatar_url : null}
+          >
+            {character.avatar_url?.startsWith('http') ? '' : '🤖'}
           </Avatar>
         }
         title={character.name}
@@ -93,9 +95,9 @@ const CharacterCard = ({
                   {character.age ? `${character.age}岁`: '未知'}
                 </Tag>
               )}
-              {character.voice_type && (
+              {character.tag && (
                 <Tag color="purple" className="voice-tag">
-                  {character.voice_type? character.voice_type : '用户上传'}
+                  {character.tag? character.tag : ''}
                 </Tag>
               )}
             </div>
