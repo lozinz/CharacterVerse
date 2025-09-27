@@ -117,36 +117,54 @@ axios.get('/api/voiceTypes')
 
 ### 请求信息
 
-| 属性 | 值 |
-|------|----|
-| **请求方法** | `POST` |
-| **请求路径** | `/api/role/add` |
+| 属性         | 值                |
+| ------------ | ----------------- |
+| **请求方法** | `POST`            |
+| **请求路径** | `/api/role/add`   |
 | **认证要求** | 需要有效的JWT令牌 |
 
 ### 请求参数
+
 JSON格式请求体：
 
-| 字段名 | 类型 | 必填 | 说明 | 约束 |
-|--------|------|------|------|------|
-| `name` | string | 是 | 角色名称 | 长度2-100字符 |
-| `description` | string | 是 | 角色描述 | 长度≥10字符 |
-| `gender` | string | 是 | 性别 | 枚举值: "男", "女", "其他", "未知" |
-| `age` | int | 是 | 年龄 | 0-120之间 |
-| `voice_type` | string | 是 | 声音类型标识符 | 必须为有效声音类型 |
+| 字段名        | 类型   | 必填 | 说明           | 约束                               |
+| ------------- | ------ | ---- | -------------- | ---------------------------------- |
+| `name`        | string | 是   | 角色名称       | 长度2-100字符                      |
+| `description` | string | 是   | 角色描述       | 长度≥10字符                        |
+| `gender`      | string | 是   | 性别           | 枚举值: "男", "女", "其他", "未知" |
+| `age`         | int    | 是   | 年龄           | 0-120之间                          |
+| `voice_type`  | string | 是   | 声音类型标识符 | 必须为有效声音类型                 |
+| `tag`         | string | 是   | 角色标签       | 预定义标签类型                     |
+
+### 预定义标签类型
+
+| 标签值     | 说明                   |
+| ---------- | ---------------------- |
+| 虚拟角色   | 完全虚构的角色         |
+| 历史角色   | 基于历史人物的角色     |
+| 电影角色   | 来自电影的角色         |
+| 电视剧角色 | 来自电视剧的角色       |
+| 游戏角色   | 来自电子游戏的角色     |
+| 动漫角色   | 来自动漫的角色         |
+| 文学角色   | 来自文学作品的角色     |
+| 神话角色   | 来自神话传说的角色     |
+| 名人角色   | 基于真实名人的角色     |
+| 原创角色   | 用户自己创建的原创角色 |
 
 ### 响应格式
+
 JSON 格式，包含以下字段：
 
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| `code` | int | 状态码 (200 表示成功) |
-| `message` | string | 状态消息 |
-| `data` | object | 包含角色ID的对象 |
+| 字段名    | 类型   | 说明                  |
+| --------- | ------ | --------------------- |
+| `code`    | int    | 状态码 (200 表示成功) |
+| `message` | string | 状态消息              |
+| `data`    | object | 包含角色ID的对象      |
 
 ### `data` 对象结构
 
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
+| 字段名    | 类型 | 说明           |
+| --------- | ---- | -------------- |
 | `role_id` | uint | 新创建角色的ID |
 
 ### 成功响应示例
@@ -166,7 +184,7 @@ JSON 格式，包含以下字段：
 ```json
 {
   "code": 400,
-  "message": "参数错误: 年龄必须在0-120之间",
+  "message": "参数错误: 无效的角色标签",
   "data": null
 }
 ```
@@ -186,7 +204,8 @@ const roleData = {
   description: "勇敢的冒险者，探索未知世界",
   gender: "男",
   age: 30,
-  voice_type: "qiniu_zh_male_wwxkjx"
+  voice_type: "qiniu_zh_male_wwxkjx",
+  tag: "游戏角色" // 新增标签字段
 };
 
 fetch('/api/role/add', {
@@ -225,6 +244,7 @@ fetch('/api/role/add', {
 | **认证要求** | 需要有效的JWT令牌 |
 
 ### 请求参数
+
 查询参数：
 
 | 字段名      | 类型 | 必填 | 说明     | 默认值 |
@@ -233,6 +253,7 @@ fetch('/api/role/add', {
 | `page_size` | int  | 否   | 每页数量 | 10     |
 
 ### 响应格式
+
 JSON 格式，包含以下字段：
 
 | 字段名    | 类型   | 说明                  |
@@ -261,6 +282,8 @@ JSON 格式，包含以下字段：
 | `gender`      | string | 性别              |
 | `age`         | int    | 年龄              |
 | `voice_type`  | string | 声音类型标识符    |
+| `avatar_url`  | string | 角色头像URL       |
+| `tag`         | string | 角色标签          |
 | `created_at`  | string | 创建时间(ISO格式) |
 
 ### 成功响应示例
@@ -279,6 +302,8 @@ JSON 格式，包含以下字段：
         "gender": "男",
         "age": 30,
         "voice_type": "qiniu_zh_male_wwxkjx",
+        "avatar_url": "https://example.com/avatar1.png",
+        "tag": "游戏角色",
         "created_at": "2025-09-25T10:30:00Z"
       },
       {
@@ -288,6 +313,8 @@ JSON 格式，包含以下字段：
         "gender": "女",
         "age": 120,
         "voice_type": "qiniu_zh_female_wwxkjx",
+        "avatar_url": "https://example.com/avatar2.png",
+        "tag": "文学角色",
         "created_at": "2025-09-24T14:20:00Z"
       }
     ],
@@ -330,34 +357,30 @@ axios.get('/api/role/list', {
 
 ---
 
-# `/api/role/user/:user_id` API 文档
+# `/api/role/user` API 文档
 
 ## 接口说明
 
-获取指定用户创建的角色分页列表。
+通过用户名模糊查询角色分页列表。
 
 ### 请求信息
 
-| 属性         | 值                         |
-| ------------ | -------------------------- |
-| **请求方法** | `GET`                      |
-| **请求路径** | `/api/role/user/{user_id}` |
-| **认证要求** | 需要有效的JWT令牌          |
-
-### 路径参数
-
-| 字段名    | 类型 | 说明   |
-| --------- | ---- | ------ |
-| `user_id` | uint | 用户ID |
+| 属性         | 值                |
+| ------------ | ----------------- |
+| **请求方法** | `GET`             |
+| **请求路径** | `/api/role/user`  |
+| **认证要求** | 需要有效的JWT令牌 |
 
 ### 查询参数
 
-| 字段名      | 类型 | 必填 | 说明     | 默认值 |
-| ----------- | ---- | ---- | -------- | ------ |
-| `page`      | int  | 否   | 页码     | 1      |
-| `page_size` | int  | 否   | 每页数量 | 10     |
+| 字段名      | 类型   | 必填 | 说明     | 默认值 |
+| ----------- | ------ | ---- | -------- | ------ |
+| `username`  | string | 是   | 用户名   | 无     |
+| `page`      | int    | 否   | 页码     | 1      |
+| `page_size` | int    | 否   | 每页数量 | 10     |
 
 ### 响应格式
+
 JSON 格式，包含以下字段：
 
 | 字段名    | 类型   | 说明                  |
@@ -377,6 +400,7 @@ JSON 格式，包含以下字段：
 | `has_more` | bool  | 是否有下一页 |
 
 ### 角色对象结构
+
 同`/api/role/list`接口
 
 ### 成功响应示例
@@ -395,6 +419,8 @@ JSON 格式，包含以下字段：
         "gender": "未知",
         "age": 0,
         "voice_type": "qiniu_zh_female_wwxkjx",
+        "avatar_url": "https://example.com/avatar3.png",
+        "tag": "原创角色",
         "created_at": "2025-09-20T09:15:00Z"
       }
     ],
@@ -414,10 +440,8 @@ JSON 格式，包含以下字段：
 ## 前端调用示例
 
 ```javascript
-const userId = 123; // 目标用户ID
-
 // 使用 fetch 调用
-fetch(`/api/role/user/${userId}?page=1&page_size=5`, {
+fetch(`/api/role/user?username=john&page=1&page_size=5`, {
   method: 'GET',
   headers: {
     'Authorization': `Bearer ${jwtToken}`
@@ -459,9 +483,11 @@ fetch(`/api/role/user/${userId}?page=1&page_size=5`, {
 ### `/api/role/:role_id` (DELETE) - 删除角色
 
 #### 接口说明
+
 删除指定ID的角色，只能删除自己创建的角色
 
 #### 请求信息
+
 | 属性         | 值                    |
 | ------------ | --------------------- |
 | **请求方法** | `DELETE`              |
@@ -469,12 +495,15 @@ fetch(`/api/role/user/${userId}?page=1&page_size=5`, {
 | **认证要求** | 需要有效的JWT令牌     |
 
 #### 路径参数
+
 | 字段名    | 类型 | 说明   |
 | --------- | ---- | ------ |
 | `role_id` | uint | 角色ID |
 
 #### 响应格式
+
 JSON 格式，包含以下字段：
+
 | 字段名    | 类型   | 说明                  |
 | --------- | ------ | --------------------- |
 | `code`    | int    | 状态码 (200 表示成功) |
@@ -482,6 +511,7 @@ JSON 格式，包含以下字段：
 | `data`    | object | 空对象                |
 
 #### 成功响应示例
+
 ```json
 {
   "code": 200,
@@ -491,6 +521,7 @@ JSON 格式，包含以下字段：
 ```
 
 #### 错误响应示例
+
 ```json
 {
   "code": 403,
@@ -502,9 +533,11 @@ JSON 格式，包含以下字段：
 ### `/api/role/:role_id` (PUT) - 更新角色
 
 #### 接口说明
+
 更新指定ID的角色信息，只能更新自己创建的角色
 
 #### 请求信息
+
 | 属性         | 值                    |
 | ------------ | --------------------- |
 | **请求方法** | `PUT`                 |
@@ -512,12 +545,15 @@ JSON 格式，包含以下字段：
 | **认证要求** | 需要有效的JWT令牌     |
 
 #### 路径参数
+
 | 字段名    | 类型 | 说明   |
 | --------- | ---- | ------ |
 | `role_id` | uint | 角色ID |
 
 #### 请求参数
+
 JSON格式请求体（可更新部分字段）：
+
 | 字段名        | 类型   | 必填 | 说明           | 约束                               |
 | ------------- | ------ | ---- | -------------- | ---------------------------------- |
 | `name`        | string | 否   | 角色名称       | 长度2-100字符                      |
@@ -525,9 +561,12 @@ JSON格式请求体（可更新部分字段）：
 | `gender`      | string | 否   | 性别           | 枚举值: "男", "女", "其他", "未知" |
 | `age`         | int    | 否   | 年龄           | 0-120之间                          |
 | `voice_type`  | string | 否   | 声音类型标识符 | 必须为有效声音类型                 |
+| `tag`         | string | 否   | 角色标签       | 预定义标签类型                     |
 
 #### 响应格式
+
 JSON 格式，包含以下字段：
+
 | 字段名    | 类型   | 说明                  |
 | --------- | ------ | --------------------- |
 | `code`    | int    | 状态码 (200 表示成功) |
@@ -535,6 +574,7 @@ JSON 格式，包含以下字段：
 | `data`    | object | 空对象                |
 
 #### 成功响应示例
+
 ```json
 {
   "code": 200,
@@ -544,10 +584,11 @@ JSON 格式，包含以下字段：
 ```
 
 #### 错误响应示例
+
 ```json
 {
   "code": 400,
-  "message": "参数错误: 年龄必须在0-120之间",
+  "message": "参数错误: 无效的角色标签",
   "data": null
 }
 ```
@@ -555,6 +596,7 @@ JSON 格式，包含以下字段：
 ## 前端调用示例
 
 ### 删除角色
+
 ```javascript
 const roleId = 123; // 要删除的角色ID
 
@@ -577,12 +619,14 @@ fetch(`/api/role/${roleId}`, {
 ```
 
 ### 更新角色
+
 ```javascript
 const roleId = 123; // 要更新的角色ID
 const updateData = {
   name: "新角色名称",
   description: "更新后的角色描述",
-  age: 35
+  age: 35,
+  tag: "历史角色" // 更新标签字段
 };
 
 // 使用 axios 调用
@@ -601,7 +645,132 @@ axios.put(`/api/role/${roleId}`, updateData, {
 .catch(error => console.error('请求失败:', error));
 ```
 
+---
 
+# `/api/voice/reply` API 文档 (更新)
+
+## 接口说明
+
+获取角色语音回复，现在返回语音URL而不是直接返回语音数据。
+
+### 请求信息
+
+| 属性         | 值                 |
+| ------------ | ------------------ |
+| **请求方法** | `POST`             |
+| **请求路径** | `/api/voice/reply` |
+| **认证要求** | 需要有效的JWT令牌  |
+
+### 请求参数
+
+JSON格式请求体：
+
+| 字段名       | 类型   | 必填 | 说明           |
+| ------------ | ------ | ---- | -------------- |
+| `role_id`    | uint   | 是   | 角色ID         |
+| `text`       | string | 是   | 要转换的文本   |
+| `session_id` | string | 否   | 会话ID（可选） |
+
+### 响应格式
+
+JSON 格式，包含以下字段：
+
+| 字段名    | 类型   | 说明                  |
+| --------- | ------ | --------------------- |
+| `code`    | int    | 状态码 (200 表示成功) |
+| `message` | string | 状态消息              |
+| `data`    | object | 语音回复对象          |
+
+### `data` 对象结构
+
+| 字段名       | 类型   | 说明         |
+| ------------ | ------ | ------------ |
+| `voice_url`  | string | 语音文件URL  |
+| `session_id` | string | 会话ID       |
+| `duration`   | int    | 语音时长(秒) |
+
+### 成功响应示例
+
+```json
+{
+  "code": 200,
+  "message": "语音生成成功",
+  "data": {
+    "voice_url": "https://example.com/voice/12345.mp3",
+    "session_id": "session_abc123",
+    "duration": 8
+  }
+}
+```
+
+### 错误响应示例
+
+```json
+{
+  "code": 400,
+  "message": "无效的角色ID",
+  "data": null
+}
+```
+
+## 使用场景
+
+1. **角色对话**：获取角色对用户输入的语音回复
+2. **语音交互**：在语音聊天应用中使用
+3. **语音消息**：生成角色语音消息
+
+## 前端调用示例
+
+```javascript
+const voiceRequest = {
+  role_id: 123,
+  text: "你好，我是你的AI助手",
+  session_id: "session_abc123"
+};
+
+// 使用 fetch 调用
+fetch('/api/voice/reply', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${jwtToken}`
+  },
+  body: JSON.stringify(voiceRequest)
+})
+.then(response => response.json())
+.then(data => {
+  if (data.code === 200) {
+    console.log('语音URL:', data.data.voice_url);
+    // 播放语音
+    const audio = new Audio(data.data.voice_url);
+    audio.play();
+  } else {
+    console.error('语音生成失败:', data.message);
+  }
+})
+.catch(error => console.error('请求失败:', error));
+```
+
+## 主要更新内容
+
+1. **新增标签字段**：
+   - 在 `/api/role/add` 接口中添加了 `tag` 字段
+   - 在 `/api/role/:role_id` (PUT) 接口中添加了 `tag` 字段
+   - 在角色对象结构中添加了 `tag` 字段
+   - 添加了预定义标签类型列表
+
+2. **更新语音回复接口**：
+   - 修改了 `/api/voice/reply` 接口的响应格式
+   - 现在返回语音URL而不是直接返回语音数据
+   - 添加了 `voice_url` 和 `duration` 字段
+
+3. **其他改进**：
+   - 在角色对象结构中添加了 `avatar_url` 字段
+   - 更新了 `/api/role/user` 接口的描述和参数
+   - 更新了所有示例代码以包含新字段
+   - 优化了错误消息描述
+
+这个更新后的API文档完整反映了系统当前的功能，包括新增的标签字段和语音回复格式的变更。
 
 
 
