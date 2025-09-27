@@ -1859,3 +1859,248 @@ getRolesByTag('奇幻', 1, 20)
   .then(data => console.log(data))
   .catch(error => console.error(error));
 ```
+
+
+
+我们刚刚实现了角色搜索API，现在需要为其编写API文档。以下是一个标准的API文档格式，使用Markdown编写。
+
+### 角色搜索API文档
+
+#### 1. 基本信息
+- **端点**: `GET /api/role/search`
+- **功能**: 根据关键字模糊搜索角色（按照角色名称、用户名、标签、描述的顺序）
+- **认证**: 需要有效的JWT令牌（在Authorization头中）
+
+#### 2. 请求参数
+| 参数名        | 位置   | 类型   | 必填 | 说明                               |
+| ------------- | ------ | ------ | ---- | ---------------------------------- |
+| keyword       | query  | string | 是   | 搜索关键字                         |
+| page          | query  | int    | 否   | 页码（从1开始），默认1             |
+| pageSize      | query  | int    | 否   | 每页数量，默认10，最大100          |
+| Authorization | header | string | 是   | Bearer令牌，格式：`Bearer <token>` |
+
+#### 3. 请求示例
+```bash
+curl -X GET "http://localhost:8080/api/role/search?keyword=英雄&page=1&pageSize=10" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+#### 4. 响应结构
+- **状态码**: 200 (成功)
+- **响应体**:
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "total": 42,
+    "list": [
+      {
+        "id": 1,
+        "name": "钢铁侠",
+        "description": "漫威超级英雄",
+        "user_id": 123,
+        "gender": "男",
+        "age": 45,
+        "voice_type": "heroic",
+        "avatar_url": "https://example.com/avatars/1.png",
+        "tag": "超级英雄",
+        "created_at": "2025-09-01T12:00:00Z",
+        "updated_at": "2025-09-01T12:00:00Z"
+      },
+      // ... 其他角色
+    ],
+    "page": 1,
+    "pages": 5,
+    "hasMore": true
+  }
+}
+```
+
+#### 5. 响应字段说明
+- **code**: 响应状态码（0表示成功）
+- **message**: 响应消息
+- **data**: 分页数据对象
+  - **total**: 总记录数
+  - **list**: 当前页的角色列表
+    - **id**: 角色ID
+    - **name**: 角色名称
+    - **description**: 角色描述
+    - **user_id**: 创建者用户ID
+    - **gender**: 性别（男/女/其他/未知）
+    - **age**: 年龄
+    - **voice_type**: 声音类型标识
+    - **avatar_url**: 头像URL
+    - **tag**: 角色标签
+    - **created_at**: 创建时间（ISO8601格式）
+    - **updated_at**: 更新时间（ISO8601格式）
+  - **page**: 当前页码
+  - **pages**: 总页数
+  - **hasMore**: 是否有下一页（true/false）
+
+#### 6. 错误状态码
+| 状态码 | 错误信息       | 说明                |
+| ------ | -------------- | ------------------- |
+| 400    | 必须提供关键字 | 缺少keyword参数     |
+| 401    | 用户未认证     | 缺少或无效的JWT令牌 |
+| 500    | 服务器内部错误 | 数据库操作失败等    |
+
+#### 7. 注意事项
+1. 搜索逻辑：按照以下顺序进行模糊匹配（LIKE '%keyword%'）：
+   - 角色名称（name）
+   - 用户名（通过关联用户表查询username）
+   - 标签（tag）
+   - 描述（description）
+2. 分页参数不传或传0时使用默认值（page=1, pageSize=10）
+3. 每页数量最大限制为100，超过100按100处理
+
+---
+
+这个文档清晰地描述了API的使用方法、请求参数、响应结构和错误处理，方便前端开发者或第三方集成使用。
+
+
+
+
+
+# 角色搜索API文档
+
+## 1. 概述
+角色搜索API允许用户根据关键字模糊查询角色信息，支持分页功能。查询顺序为：
+1. 角色名称 (roleName)
+2. 用户名 (username)
+3. 标签 (Tag)
+4. 描述 (Description)
+
+## 2. 端点
+`GET /api/role/search`
+
+## 3. 认证
+- 需要有效的JWT令牌
+- 在请求头中添加：`Authorization: Bearer <your_jwt_token>`
+
+## 4. 请求参数
+
+### 查询参数
+| 参数名   | 类型   | 是否必需 | 默认值 | 描述                    | 示例值 |
+| -------- | ------ | -------- | ------ | ----------------------- | ------ |
+| keyword  | string | 是       | 无     | 搜索关键字              | "英雄" |
+| page     | int    | 否       | 1      | 页码（从1开始）         | 1      |
+| pageSize | int    | 否       | 10     | 每页显示数量（最大100） | 20     |
+
+## 5. 响应
+
+### 成功响应 (200 OK)
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "total": 42,
+    "list": [
+      {
+        "id": 1,
+        "name": "钢铁侠",
+        "description": "漫威超级英雄",
+        "user_id": 123,
+        "gender": "男",
+        "age": 45,
+        "voice_type": "heroic",
+        "avatar_url": "https://example.com/avatars/1.png",
+        "tag": "超级英雄",
+        "created_at": "2025-09-01T12:00:00Z",
+        "updated_at": "2025-09-01T12:00:00Z"
+      },
+      {
+        "id": 2,
+        "name": "亚瑟王",
+        "description": "传说中的英雄王",
+        "user_id": 456,
+        "gender": "男",
+        "age": 35,
+        "voice_type": "noble",
+        "avatar_url": "https://example.com/avatars/2.png",
+        "tag": "历史英雄",
+        "created_at": "2025-09-02T10:30:00Z",
+        "updated_at": "2025-09-02T10:30:00Z"
+      }
+    ],
+    "page": 1,
+    "pages": 3,
+    "hasMore": true
+  }
+}
+```
+
+### 响应字段说明
+- **code**: 响应状态码（0表示成功）
+- **message**: 响应消息
+- **data**: 分页数据对象
+  - **total**: 总记录数
+  - **list**: 当前页的角色列表
+    - **id**: 角色ID
+    - **name**: 角色名称
+    - **description**: 角色描述
+    - **user_id**: 创建者用户ID
+    - **gender**: 性别（男/女/其他/未知）
+    - **age**: 年龄
+    - **voice_type**: 声音类型标识
+    - **avatar_url**: 头像URL
+    - **tag**: 角色标签
+    - **created_at**: 创建时间（ISO8601格式）
+    - **updated_at**: 更新时间（ISO8601格式）
+  - **page**: 当前页码
+  - **pages**: 总页数
+  - **hasMore**: 是否有下一页（true/false）
+
+### 错误响应
+| 状态码 | 错误信息       | 说明                   |
+| ------ | -------------- | ---------------------- |
+| 400    | 必须提供关键字 | 缺少keyword参数        |
+| 400    | 分页参数错误   | page或pageSize格式无效 |
+| 401    | 用户未认证     | 缺少或无效的JWT令牌    |
+| 500    | 服务器内部错误 | 数据库操作失败等       |
+
+## 6. 使用示例
+
+### cURL示例
+```bash
+curl -X GET "http://localhost:8080/api/role/search?keyword=英雄&page=1&pageSize=20" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+### JavaScript示例
+```javascript
+async function searchRoles(keyword, page = 1, pageSize = 10) {
+  const url = new URL('http://localhost:8080/api/role/search');
+  url.searchParams.append('keyword', keyword);
+  url.searchParams.append('page', page);
+  url.searchParams.append('pageSize', pageSize);
+  
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Authorization': 'Bearer YOUR_JWT_TOKEN_HERE'
+    }
+  });
+  
+  if (!response.ok) {
+    throw new Error(`API请求失败: ${response.status}`);
+  }
+  
+  return await response.json();
+}
+
+// 使用示例
+searchRoles('英雄', 1, 20)
+  .then(data => console.log(data))
+  .catch(error => console.error(error));
+```
+
+## 7. 注意事项
+1. 搜索逻辑：按照角色名称→用户名→标签→描述的顺序进行模糊匹配
+2. 分页参数：
+   - 页码从1开始
+   - 每页数量最大为100，超过100将自动设为100
+   - 不提供分页参数时使用默认值（page=1, pageSize=10）
+3. 性能考虑：避免使用过于宽泛的关键字（如单个字符）
+4. 认证要求：所有请求必须提供有效的JWT令牌

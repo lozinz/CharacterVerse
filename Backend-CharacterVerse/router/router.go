@@ -29,6 +29,7 @@ func RouterInit(r *gin.Engine) {
 			roleGroup.GET("/list", api.ListRoles)
 			roleGroup.GET("/user", api.GetRolesByUsername)
 			roleGroup.GET("/tag", api.GetRolesByTag)
+			roleGroup.GET("/search", api.SearchRoles)
 			roleGroup.DELETE("/:role_id", api.DeleteRole)
 			roleGroup.PUT("/:role_id", api.UpdateRole)
 		}

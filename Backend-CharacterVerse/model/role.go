@@ -4,8 +4,8 @@ import "gorm.io/gorm"
 
 // 分页查询参数
 type Pagination struct {
-	Page     int `form:"page" binding:"min=1"`      // 页码，从1开始
-	PageSize int `form:"page_size" binding:"min=1"` // 每页数量
+	Page     int `form:"page" binding:"min=0"`     // 修改为 min=0
+	PageSize int `form:"pageSize" binding:"min=0"` // 修改为 min=0 并修正字段名
 }
 
 // 分页查询结果

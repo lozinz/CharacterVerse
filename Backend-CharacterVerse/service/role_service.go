@@ -424,6 +424,26 @@ func GetRolesByTag(tag string, pagination model.Pagination) (*model.PaginatedRes
 	return paginateRoles(query, pagination)
 }
 
+// 通过关键字模糊查询角色（按照角色名称、用户名、标签、描述的顺序）
+func SearchRolesByKeyword(keyword string, pagination model.Pagination) (*model.PaginatedResult, error) {
+	// 构建基础查询
+	baseQuery := database.DB.Model(&model.Role{})
+
+	// 使用OR条件组合多个字段的模糊查询
+	query := baseQuery.Where(
+		"name LIKE ? OR "+
+			"id IN (SELECT roles.id FROM roles JOIN users ON users.id = roles.user_id WHERE users.username LIKE ?) OR "+
+			"tag LIKE ? OR "+
+			"description LIKE ?",
+		"%"+keyword+"%",
+		"%"+keyword+"%",
+		"%"+keyword+"%",
+		"%"+keyword+"%",
+	)
+
+	return paginateRoles(query, pagination)
+}
+
 // 删除角色
 func DeleteRole(roleID, userID uint) error {
 	// 检查角色是否存在且属于当前用户
