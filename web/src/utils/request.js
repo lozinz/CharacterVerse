@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 // 创建 axios 实例
-const request = axios.create({
+ export const request = axios.create({
   baseURL:  'http://localhost:8080/api',
   timeout: 10000, // 请求超时时间
 })
@@ -131,5 +131,11 @@ export const isCancel = (error) => {
   return axios.isCancel(error)
 }
 
-// 导出 axios 实例和封装的方法
-export default request 
+// GET 请求封装函数 - 将参数转换为 URL 查询参数
+export const get = (url, params = {}) => {
+  return request({
+    method: 'get',
+    url,
+    params
+  })
+}

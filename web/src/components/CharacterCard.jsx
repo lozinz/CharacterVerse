@@ -15,6 +15,7 @@ const CharacterCard = ({
   ...props 
 }) => {
   const actions = showActions ? [
+    // TODO: 添加收藏按钮
     onToggleFavorite && (
       <Button 
         key="favorite"
@@ -24,6 +25,7 @@ const CharacterCard = ({
         size="small"
       />
     ),
+    // TODO: 添加编辑按钮
     onEdit && (
       <Button 
         key="edit"
@@ -33,6 +35,7 @@ const CharacterCard = ({
         size="small"
       />
     ),
+    // TODO: 添加聊天按钮
     onChat && (
       <Button 
         key="chat"
@@ -44,6 +47,7 @@ const CharacterCard = ({
         聊天
       </Button>
     ),
+    // TODO: 添加删除按钮
     onDelete && (
       <Popconfirm
         key="delete"
@@ -71,19 +75,35 @@ const CharacterCard = ({
     >
       <Meta
         avatar={
-          <Avatar size={48} style={{ fontSize: '1.5rem' }}>
-            {character.avatar}
+          <Avatar size={48} style={{ fontSize: '1.5rem', backgroundColor: '#1890ff' }}>
+            {character.avatar || character.name?.charAt(0) || '👤'}
           </Avatar>
         }
         title={character.name}
         description={
           <div className="character-meta">
-            <Tag color="blue" className="personality-tag">
-              {character.personality}
-            </Tag>
+            <div style={{ marginBottom: '8px' }}>
+              {character.gender && (
+                <Tag color="blue" className="gender-tag">
+                  {character.gender === 'male' ? '男' : character.gender === 'female' ? '女' : character.gender}
+                </Tag>
+              )}
+              {character.age && (
+                <Tag color="green" className="age-tag">
+                  {character.age ? `${character.age}岁`: '未知'}
+                </Tag>
+              )}
+              {character.voice_type && (
+                <Tag color="purple" className="voice-tag">
+                  {character.voice_type? character.voice_type : '用户上传'}
+                </Tag>
+              )}
+            </div>
             <p className="character-description">{character.description}</p>
-            {character.createdAt && (
-              <p className="created-date">创建于: {character.createdAt}</p>
+            {character.created_at && (
+              <p className="created-date">
+                创建于: {new Date(character.CreatedAt).toLocaleDateString('zh-CN')}
+              </p>
             )}
           </div>
         }
