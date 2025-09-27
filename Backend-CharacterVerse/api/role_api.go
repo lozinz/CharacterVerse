@@ -86,7 +86,7 @@ func ListRoles(c *gin.Context) {
 	c.JSON(response.Success(result).Code, response.Success(result))
 }
 
-// 修改后的函数：通过用户名模糊查询角色
+// 通过用户名模糊查询角色
 func GetRolesByUsername(c *gin.Context) {
 	pagination, resp := parsePagination(c)
 	if resp != nil {
@@ -103,6 +103,32 @@ func GetRolesByUsername(c *gin.Context) {
 	}
 
 	result, err := service.GetRolesByUsername(username, pagination)
+	if err != nil {
+		resp := response.InternalError(err.Error())
+		c.JSON(resp.Code, resp)
+		return
+	}
+
+	c.JSON(response.Success(result).Code, response.Success(result))
+}
+
+// 通过标签模糊查询角色
+func GetRolesByTag(c *gin.Context) {
+	pagination, resp := parsePagination(c)
+	if resp != nil {
+		c.JSON(resp.Code, resp)
+		return
+	}
+
+	// 从查询参数获取标签
+	tag := c.Query("tag")
+	if tag == "" {
+		resp := response.BadRequest("必须提供标签")
+		c.JSON(resp.Code, resp)
+		return
+	}
+
+	result, err := service.GetRolesByTag(tag, pagination)
 	if err != nil {
 		resp := response.InternalError(err.Error())
 		c.JSON(resp.Code, resp)

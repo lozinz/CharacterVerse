@@ -405,12 +405,21 @@ func GetRoles(pagination model.Pagination) (*model.PaginatedResult, error) {
 	return paginateRoles(database.DB, pagination)
 }
 
-// 新增函数：通过用户名模糊查询角色
+// 通过用户名模糊查询角色
 func GetRolesByUsername(username string, pagination model.Pagination) (*model.PaginatedResult, error) {
 	// 关联用户表进行模糊查询
 	query := database.DB.
 		Joins("JOIN users ON users.id = roles.user_id").
 		Where("users.username LIKE ?", "%"+username+"%")
+
+	return paginateRoles(query, pagination)
+}
+
+// 通过标签模糊查询角色
+func GetRolesByTag(tag string, pagination model.Pagination) (*model.PaginatedResult, error) {
+	// 使用LIKE进行模糊查询
+	query := database.DB.
+		Where("tag LIKE ?", "%"+tag+"%")
 
 	return paginateRoles(query, pagination)
 }

@@ -1751,9 +1751,111 @@ fetch('/api/history/user/123/role/456', {
 
 ## 注意事项
 1. 所有接口都需要有效的JWT令牌
+
 2. 时间字段均为ISO 8601格式的UTC时间
+
 3. 空结果返回空数组，不返回null
+
 4. 错误状态码：
    - 400：参数错误
+   
    - 401：认证失败
+   
    - 500：服务器错误
+   
+     
+   
+     
+
+# 通过标签查询角色
+
+#### 1. 接口说明
+- **功能**：根据标签模糊查询角色列表（支持分页）
+- **认证方式**：JWT认证（需在请求头中携带有效Token）
+- **请求方法**：GET
+- **请求路径**：`/api/role/tag`
+
+#### 2. 请求参数
+
+| 参数名   | 类型   | 是否必须 | 默认值 | 说明                         |
+| -------- | ------ | -------- | ------ | ---------------------------- |
+| tag      | string | 是       | 无     | 要查询的标签（支持模糊匹配） |
+| page     | int    | 否       | 1      | 当前页码（从1开始）          |
+| pageSize | int    | 否       | 10     | 每页显示数量（最大100）      |
+
+#### 3. 请求示例
+```bash
+GET /api/role/tag?tag=英雄&page=2&pageSize=20
+Authorization: Bearer <your_jwt_token>
+```
+
+#### 4. 成功响应（200 OK）
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "total": 85,
+    "list": [
+      {
+        "id": 42,
+        "name": "钢铁侠",
+        "description": "漫威超级英雄",
+        "gender": "男",
+        "age": 45,
+        "voice_type": "heroic",
+        "tag": "超级英雄",
+        "avatar_url": "https://example.com/avatars/ironman.png"
+      },
+      // 其他角色对象...
+    ],
+    "page": 2,
+    "pages": 5,
+    "hasMore": true
+  }
+}
+```
+
+#### 5. 响应字段说明
+| 字段    | 类型  | 说明                   |
+| ------- | ----- | ---------------------- |
+| total   | int   | 符合条件的所有角色总数 |
+| list    | array | 当前页的角色列表       |
+| page    | int   | 当前页码               |
+| pages   | int   | 总页数                 |
+| hasMore | bool  | 是否有更多数据         |
+
+#### 6. 错误响应
+| 状态码 | 错误信息         | 原因说明            |
+| ------ | ---------------- | ------------------- |
+| 400    | "必须提供标签"   | 缺少tag参数         |
+| 401    | "用户未认证"     | JWT Token无效或过期 |
+| 500    | "数据库查询失败" | 服务器内部错误      |
+
+#### 7. 注意事项
+1. 标签查询是模糊匹配（SQL LIKE查询），例如`tag=英雄`会匹配包含"英雄"的所有标签
+2. 分页参数不传时使用默认值（page=1, pageSize=10）
+3. 返回的角色列表按创建时间倒序排列（最新创建的角色在前）
+4. 需要有效的JWT认证，否则返回401未认证错误
+
+#### 8. 使用示例（JavaScript）
+```javascript
+async function getRolesByTag(tag, page = 1, pageSize = 10) {
+  const response = await fetch(`/api/role/tag?tag=${tag}&page=${page}&pageSize=${pageSize}`, {
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('token')}`
+    }
+  });
+  
+  if (!response.ok) {
+    throw new Error(`请求失败: ${response.status}`);
+  }
+  
+  return response.json();
+}
+
+// 使用示例
+getRolesByTag('奇幻', 1, 20)
+  .then(data => console.log(data))
+  .catch(error => console.error(error));
+```
