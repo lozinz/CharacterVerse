@@ -57,8 +57,6 @@ export const VoiceCallProvider = ({ children }) => {
   const recordingChunksRef = useRef([])
   const lastVolumeRef = useRef(0)
   const vadRef = useRef(null)
-  const speechQualityRef = useRef(0) // 语音质量评分
-  const noiseDetectionRef = useRef(0) // 噪音检测计数
   const speechStartTimeRef = useRef(null) // 语音开始时间
   const isSpeakingRef = useRef(false) // 当前语音状态的ref，用于回调中的实时状态跟踪
   
@@ -123,12 +121,9 @@ export const VoiceCallProvider = ({ children }) => {
       }
       
       const mergedBase64 = btoa(binaryString)
-      
-      console.log(`🎵 音频合并完成: ${audioDataChunks.length}个片段 → 1个文件 (${totalLength}字节)`)
       return mergedBase64
       
     } catch (error) {
-      console.error('音频合并失败:', error)
       // 如果合并失败，返回第一个音频数据
       return audioDataChunks[0]
     }
@@ -202,8 +197,6 @@ export const VoiceCallProvider = ({ children }) => {
           bufferSize: 4096,
           enableAnalysis: true,
           onError: (error) => {
-            console.error('AudioWorklet录音器错误:', error)
-            message.error(': ' + error.message)
           },
           onVolumeChange: (vol) => {
             // 更新音量数据
@@ -232,7 +225,6 @@ export const VoiceCallProvider = ({ children }) => {
             
             // 语音开始检测 - 立即响应，无防抖
             if (!wasSpeaking && isLoudEnough && consecutiveHighVolumeRef.current >= 1) { // 只需要1次检测
-              console.log(`🎤 语音开始! 音量: ${vol.toFixed(3)} > ${VOLUME_THRESHOLD}`)
               isSpeakingRef.current = true
               lastSpeakingTimeRef.current = Date.now()
               speechStartTimeRef.current = Date.now()
@@ -250,7 +242,6 @@ export const VoiceCallProvider = ({ children }) => {
               
               // 用户开始说话时，设置延迟暂停机制，避免误触发
               if (playbackState.isPlaying || isPlayingRef.current) {
-                console.log(`🎤 用户开始说话，${SPEECH_PAUSE_DELAY}ms后暂停AI音频`)
                 
                 // 清除之前的暂停定时器（如果存在）
                 if (audioPauseTimerRef.current) {
@@ -262,7 +253,6 @@ export const VoiceCallProvider = ({ children }) => {
                 audioPauseTimerRef.current = setTimeout(() => {
                   // 再次检查用户是否还在说话
                   if (isSpeakingRef.current) {
-                    console.log('🎤 用户连续说话超过阈值，停止AI播放并清空所有队列')
                     stopPlayback()
                     
                     // 清空播放队列
@@ -286,7 +276,6 @@ export const VoiceCallProvider = ({ children }) => {
                     }))
 
                   } else {
-                    console.log('🎤 用户已停止说话，取消暂停操作')
                   }
                   
                   // 清除定时器引用
@@ -309,7 +298,6 @@ export const VoiceCallProvider = ({ children }) => {
                 const MIN_SPEECH_DURATION = 500 // 最小有效语音时长500ms
                 
                 if (speechDuration < MIN_SPEECH_DURATION) {
-                  console.log(`🔇 检测到噪音打断 (语音时长: ${speechDuration}ms < ${MIN_SPEECH_DURATION}ms)，不执行录音发送`)
                   
                   // 重置状态但不发送录音
                   isSpeakingRef.current = false
@@ -321,7 +309,6 @@ export const VoiceCallProvider = ({ children }) => {
                   // 清空录音缓存（噪音数据）
                   recordingChunksRef.current = []
                 } else {
-                  console.log(`⏰ 超过最大静音时间 ${MAX_SILENCE_TIME}ms，语音时长: ${speechDuration}ms，发送录音`)
                   isSpeakingRef.current = false
                   
                   // 清除防抖定时器
@@ -378,7 +365,6 @@ export const VoiceCallProvider = ({ children }) => {
             
             // 可选：实时显示录音数据大小（用于调试）
             if (Math.random() < 0.001) { // 0.1%的概率显示，避免过多日志
-              console.log(`📼 录音数据: ${recordingChunksRef.current.length} 块, 最新块大小: ${audioData.byteLength} 字节`)
             }
           }
         })
@@ -386,12 +372,9 @@ export const VoiceCallProvider = ({ children }) => {
         // 初始化录音器
         const initialized = await audioRecorderRef.current.initialize()
         if (initialized) {
-          console.log('AudioWorklet录音器初始化成功')
         } else {
-          console.error('AudioWorklet录音器初始化失败')
         }
       } catch (error) {
-        console.error('AudioWorklet录音器初始化失败:', error)
       }
     }
 
@@ -403,7 +386,6 @@ export const VoiceCallProvider = ({ children }) => {
         streamingChatRef.current = new StreamingChat({
           wsUrl: 'ws://localhost:8080/api/ws/voice_chat',
           onConnected: () => {
-            console.log('语音通话WebSocket连接成功')
             setCallState(prev => {
               const newState = {
                 ...prev,
@@ -422,14 +404,12 @@ export const VoiceCallProvider = ({ children }) => {
             })
           },
           onDisconnected: () => {
-            console.log('语音通话WebSocket连接断开')
             setCallState(prev => ({
               ...prev,
               wsConnected: false
             }))
           },
           onError: (error) => {
-            console.error('语音通话WebSocket错误:', error)
             setCallState(prev => ({
               ...prev,
               wsConnected: false,
@@ -438,7 +418,6 @@ export const VoiceCallProvider = ({ children }) => {
             message.error('WebSocket连接错误: ' + error.message)
           },
           onStreamEnd: (message, data) => {
-            console.log('收到语音通话消息:', data)
             // 处理语音通话相关的消息
             if (data.type === 'audio') {
               // 先添加到缓存区，而不是直接添加到播放队列
@@ -447,7 +426,6 @@ export const VoiceCallProvider = ({ children }) => {
           }
         })
       } catch (error) {
-        console.error('WebSocket初始化失败:', error)
         setCallState(prev => ({
           ...prev,
           wsError: error.message
@@ -495,7 +473,6 @@ export const VoiceCallProvider = ({ children }) => {
         try {
           currentAudioRef.current.stop()
         } catch (error) {
-          console.warn('清理时停止音频失败:', error)
         }
         currentAudioRef.current = null
       }
@@ -551,7 +528,6 @@ export const VoiceCallProvider = ({ children }) => {
   const validateRecordingQuality = () => {
     // 检查录音数据是否存在
     if (recordingChunksRef.current.length === 0) {
-      console.log('🚫 录音质量检查失败：无录音数据')
       return false
     }
     
@@ -560,7 +536,6 @@ export const VoiceCallProvider = ({ children }) => {
     const MIN_RECORDING_DURATION = 1400 // 最小录音时长300ms
     
     if (speechDuration < MIN_RECORDING_DURATION) {
-      console.log(`🚫 录音质量检查失败：录音时长过短 (${speechDuration}ms < ${MIN_RECORDING_DURATION}ms)`)
       return false
     }
     
@@ -569,21 +544,17 @@ export const VoiceCallProvider = ({ children }) => {
     const MIN_RECORDING_SIZE = 1024 // 最小录音大小1KB
     
     if (totalSize < MIN_RECORDING_SIZE) {
-      console.log(`🚫 录音质量检查失败：录音数据过小 (${totalSize}字节 < ${MIN_RECORDING_SIZE}字节)`)
       return false
     }
     
-    console.log(`✅ 录音质量检查通过：时长${speechDuration}ms，大小${totalSize}字节`)
     return true
   }
 
   // 发送录音到服务器
   const sendRecordingToServer = async () => {
-    console.log(recordingChunksRef.current,'recordingChunksRef')
     
     // 先进行录音质量检查
     if (!validateRecordingQuality()) {
-      console.log('📼 录音质量不合格，跳过发送')
       // 清空不合格的录音数据
       recordingChunksRef.current = []
       return
@@ -596,13 +567,11 @@ export const VoiceCallProvider = ({ children }) => {
       if (recordingChunksRef.current.length === 1) {
         // 如果只有一个数据块，直接使用
         audioBlob = new Blob([recordingChunksRef.current[0]], { type: 'audio/wav' })
-        console.log(`📼 单个WAV块，大小: ${recordingChunksRef.current[0].byteLength} 字节`)
       } else {
         // 合并多个 WAV 数据块的音频数据部分
         const mergedWav = mergeWAVChunks(recordingChunksRef.current)
         audioBlob = new Blob([mergedWav], { type: 'audio/wav' })
         
-        console.log(`📼 合并录音: ${recordingChunksRef.current.length} 个WAV块，合并后大小: ${mergedWav.byteLength} 字节`)
       }
       
       // 上传到服务器
@@ -629,14 +598,12 @@ export const VoiceCallProvider = ({ children }) => {
         
         if (streamingChatRef.current) {
           streamingChatRef.current.sendMessage(message)
-          console.log('录音已发送到服务器:', audioUrl)
         }
         
         // 清空录音缓存
         recordingChunksRef.current = []
       }
     } catch (error) {
-      console.error('发送录音失败:', error)
       message.error('发送录音失败: ' + error.message)
     }
   }
@@ -647,7 +614,6 @@ export const VoiceCallProvider = ({ children }) => {
     audioCacheBufferRef.current.push(audioData)
     lastCacheTimeRef.current = Date.now()
     
-    console.log(`🎵 添加音频到缓存区，当前缓存长度: ${audioCacheBufferRef.current.length}`)
     
     // 检查是否需要刷新缓存到队列
     checkAndFlushCache()
@@ -668,7 +634,6 @@ export const VoiceCallProvider = ({ children }) => {
       (nextAudioScheduledTimeRef.current && cacheLength > 0 && playbackQueueRef.current.length === 0)
     
     if (shouldFlush) {
-      console.log(`🎵 刷新缓存到队列: ${cacheLength}个音频片段 (时间间隔: ${timeSinceLastCache}ms)`)
       
       // 将缓存的音频数据批量添加到播放队列
       const cachedAudioData = audioCacheBufferRef.current.splice(0) // 清空缓存并获取所有数据
@@ -680,7 +645,6 @@ export const VoiceCallProvider = ({ children }) => {
         // 将合并后的音频作为单个文件添加到播放队列
         addToPlaybackQueue(mergedAudioData)
         
-        console.log(`🎵 已将 ${cachedAudioData.length} 个音频片段合并为1个大音频文件并存入播放队列`)
       }
       
       // 清除刷新定时器
@@ -690,9 +654,7 @@ export const VoiceCallProvider = ({ children }) => {
       }
     } else if (cacheLength > 0 && !cacheFlushTimerRef.current) {
       // 设置定时器，确保缓存不会等待太久
-      console.log(`🎵 设置缓存刷新定时器: 500ms后刷新`)
       cacheFlushTimerRef.current = setTimeout(() => {
-        console.log('🎵 定时器触发，强制刷新缓存')
         checkAndFlushCache()
       }, 500)
     }
@@ -710,20 +672,16 @@ export const VoiceCallProvider = ({ children }) => {
       }))
     }
     
-    console.log(`🎵 添加音频到播放队列，当前队列长度: ${playbackQueueRef.current.length}`)
     
     // 使用ref状态检查，避免React状态更新延迟
     if (!isPlayingRef.current && !currentAudioRef.current) {
-      console.log('🎵 当前没有播放，准备启动播放')
       
       // 极速启动策略，减少延迟
       if (playbackQueueRef.current.length >= 1) {
         // 立即启动，不等待
-        console.log('🎵 立即启动播放')
         startPlayback()
       }
     } else {
-      console.log('🎵 已在播放中，继续队列播放')
     }
   }
 
@@ -733,11 +691,9 @@ export const VoiceCallProvider = ({ children }) => {
     
     // 使用ref检查状态，避免React状态更新延迟
     if (isPlayingRef.current) {
-      console.log('🎵 已在播放中，跳过启动')
       return
     }
     
-    console.log('🎵 开始播放队列，当前队列长度:', playbackQueueRef.current.length)
     
     // 立即更新ref状态
     isPlayingRef.current = true
@@ -747,7 +703,6 @@ export const VoiceCallProvider = ({ children }) => {
       const audioContext = initAudioContext()
       await playNextInQueue(audioContext)
     } catch (error) {
-      console.error('播放失败:', error)
       isPlayingRef.current = false
       setPlaybackState(prev => ({ ...prev, isPlaying: false }))
     }
@@ -757,7 +712,6 @@ export const VoiceCallProvider = ({ children }) => {
   const playNextInQueue = async (audioContext) => {
     // 检查是否还有音频要播放
     if (playbackQueueRef.current.length === 0) {
-      console.log('🎵 播放队列为空，停止播放')
       
       // 立即更新ref状态
       isPlayingRef.current = false
@@ -784,11 +738,9 @@ export const VoiceCallProvider = ({ children }) => {
 
     // 如果当前还有音频在播放，先停止它
     if (currentAudioRef.current) {
-      console.log('🎵 停止当前播放的音频')
       try {
         currentAudioRef.current.stop()
       } catch (error) {
-        console.warn('停止当前音频失败:', error)
       }
       currentAudioRef.current = null
     }
@@ -804,7 +756,6 @@ export const VoiceCallProvider = ({ children }) => {
       }))
     }
 
-    console.log(`🎵 开始播放音频，剩余队列长度: ${playbackQueueRef.current.length}`)
 
     try {
       // 检查缓存中是否已有解码的音频
@@ -825,9 +776,7 @@ export const VoiceCallProvider = ({ children }) => {
         
         // 缓存解码结果
         audioBufferCacheRef.current.set(audioData, audioBuffer)
-        console.log('🎵 音频解码完成并缓存')
       } else {
-        console.log('🎵 使用缓存的音频数据')
       }
       
       // 创建音频源
@@ -863,38 +812,31 @@ export const VoiceCallProvider = ({ children }) => {
       
       nextAudioScheduledTimeRef.current = currentTime + actualAudioDuration + delayTime
       
-      console.log(`🎵 音频时长: ${actualAudioDuration.toFixed(0)}ms，延迟: ${delayTime.toFixed(0)}ms，预定下次播放: ${new Date(nextAudioScheduledTimeRef.current).toLocaleTimeString()}`)
       
       // 设置精确的调度定时器
       const totalWaitTime = actualAudioDuration + delayTime
       audioSchedulerRef.current = setTimeout(() => {
-        console.log('🎵 调度时间到，检查是否可以播放下一个音频')
         checkAndPlayNext(audioContext)
       }, totalWaitTime)
       
       // 播放结束回调 - 仅用于清理状态
       source.onended = () => {
-        console.log('🎵 当前音频播放完成')
         currentAudioRef.current = null
         
         // 不需要在这里处理下一个音频的播放
         // 因为调度器会在预定时间自动触发
-        console.log('🎵 音频播放完成，等待调度器在预定时间触发下一个')
       }
       
       // 设置当前播放的音频源
       currentAudioRef.current = source
       
       // 开始播放
-      console.log('🎵 开始播放当前音频')
       source.start()
       
     } catch (error) {
-      console.error('音频解码失败:', error)
       currentAudioRef.current = null
       // 跳过当前音频，播放下一个
       setTimeout(() => {
-        console.log('🎵 跳过失败的音频，播放下一个')
         playNextInQueue(audioContext)
       }, 100)
     }
@@ -908,13 +850,11 @@ export const VoiceCallProvider = ({ children }) => {
       audioSchedulerRef.current = null
     }
     
-    console.log('🎵 调度时间到，播放下一个音频')
     playNextInQueue(audioContext)
   }
 
   // 停止播放 - 优化清理逻辑
   const stopPlayback = () => {
-    console.log('🎵 停止播放，清理所有资源')
     
     // 立即更新ref状态
     isPlayingRef.current = false
@@ -923,7 +863,6 @@ export const VoiceCallProvider = ({ children }) => {
       try {
         currentAudioRef.current.stop()
       } catch (error) {
-        console.error('停止播放失败:', error)
       }
       currentAudioRef.current = null
     }
@@ -985,7 +924,6 @@ export const VoiceCallProvider = ({ children }) => {
               volume: 0
             }))
           }).catch(error => {
-            console.error('暂停录音失败:', error)
           })
         } else {
           // 取消静音：恢复录音和VAD
@@ -993,7 +931,6 @@ export const VoiceCallProvider = ({ children }) => {
             setCallState(prevState => ({ ...prevState, isRecording: true }))
 
           }).catch(error => {
-            console.error('恢复录音失败:', error)
           })
         }
       }
@@ -1008,7 +945,6 @@ export const VoiceCallProvider = ({ children }) => {
   // 发起通话
   const startCall = async (character) => {
     if (!character) {
-      message.error('请选择通话角色')
       return
     }
 
@@ -1038,7 +974,6 @@ export const VoiceCallProvider = ({ children }) => {
         
       }
     } catch (error) {
-      console.error('开始录音失败:', error)
     }
 
     // 连接WebSocket
@@ -1055,7 +990,6 @@ export const VoiceCallProvider = ({ children }) => {
         throw new Error('WebSocket未初始化')
       }
     } catch (error) {
-      console.error('WebSocket连接失败:', error)
       message.error('连接失败: ' + error.message)
       setCallState(prev => ({
         ...prev,
@@ -1073,7 +1007,6 @@ export const VoiceCallProvider = ({ children }) => {
         await audioRecorderRef.current.stopRecording()
         setCallState(prev => ({ ...prev, isRecording: false }))
       } catch (error) {
-        console.error('停止录音失败:', error)
       }
     }
 

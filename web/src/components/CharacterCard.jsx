@@ -1,6 +1,7 @@
 import { Card, Avatar, Button, Tag, Popconfirm } from 'antd'
 import { DeleteOutlined, MessageOutlined, EditOutlined, StarOutlined, StarFilled } from '@ant-design/icons'
 import './CharacterCard.css'
+import LazyAvatar from './LazyAvatar'
 
 const { Meta } = Card
 
@@ -23,6 +24,7 @@ const CharacterCard = ({
         icon={character.favorited ? <StarFilled style={{ color: '#faad14' }} /> : <StarOutlined />}
         onClick={() => onToggleFavorite?.(character.id)}
         size="middle"
+        className='card-btn'
       />
     ),
     // TODO: 添加编辑按钮
@@ -33,6 +35,7 @@ const CharacterCard = ({
         icon={<EditOutlined />}
         onClick={() => onEdit?.(character)}
         size="middle"
+        className='card-btn'
       />
     ),
     // TODO: 添加聊天按钮
@@ -43,6 +46,7 @@ const CharacterCard = ({
         icon={<MessageOutlined />}
         onClick={() => onChat?.(character)}
         size="middle"
+        className='card-btn'
       >
       </Button>
     ),
@@ -60,6 +64,7 @@ const CharacterCard = ({
           danger
           icon={<DeleteOutlined />}
           size="middle"
+          className='card-btn'
         />
       </Popconfirm>
     )
@@ -72,14 +77,17 @@ const CharacterCard = ({
       hoverable
       {...props}
     >
+
       <Meta
         avatar={
-          <Avatar size={48} 
+           <LazyAvatar 
+            size={48} 
             style={{ fontSize: '1.5rem' }}
             src={character.avatar_url?.startsWith('http') ? character.avatar_url : null}
-          >
+            >
             {character.avatar_url?.startsWith('http') ? '' : '🤖'}
-          </Avatar>
+            </LazyAvatar >
+          
         }
         title={character.name}
         description={

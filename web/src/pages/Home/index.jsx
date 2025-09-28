@@ -8,7 +8,7 @@ import {
   SunOutlined,
   MoonOutlined
 } from '@ant-design/icons'
-import { PageContainer, FeatureCard, StatCard, CharacterCard } from '../../components'
+import { PageContainer, CharacterCard } from '../../components'
 import useStore from '../../store/useStore'
 import { SearchBar } from './components'
 import useHomeStore from './store/useHomeStore'
@@ -132,8 +132,8 @@ const Home = () => {
       {/* 顶部搜索栏 */}
 
       <PageContainer
-        title="CharacterVerse AI"
-        description="欢迎来到角色宇宙 - 创建和管理您的AI角色"
+        title="AI模拟宇宙"
+        description="欢迎来到AI模拟宇宙- 体验与不同AI角色聊天"
         centered={true}
       >
       <SearchBar 

@@ -2,21 +2,17 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { 
   Avatar, 
   Button, 
-  Input, 
-  Space, 
   Typography, 
-  Empty ,
-  Card,
   Spin,
 } from 'antd'
 import { 
   UserOutlined, 
-  RobotOutlined, 
-  SendOutlined,
-  DeleteOutlined,
+  PhoneOutlined 
 } from '@ant-design/icons'
 import VoiceBubble from '../VoiceBubble'
 import { getroleHistory } from '../../server/chatService'
+import { formatDuration } from '../../../../utils/index'
+import  LazyAvatar from '../../../../components/LazyAvatar/index'
 
 const { Text } = Typography
 
@@ -27,6 +23,7 @@ const ChatArea = ({
   streamingMessage = '',
   className = '',
   messagesEndRef,
+  setStarCalls
 } = {}) => {
   const [historyMessages, setHistoryMessages] = useState([])
   const [visibleMessages, setVisibleMessages] = useState([])
@@ -39,16 +36,16 @@ const ChatArea = ({
   // 转换历史消息格式
   const transformHistoryMessage = useCallback((historyItem) => {
     return {
-      id: historyItem.ID,
-      role: historyItem.IsUser ? 'user' : 'ai',
-      message: historyItem.Message,
-      type: historyItem.MessageType || 'text',
-      timestamp: new Date(historyItem.CreatedAt).toLocaleTimeString(),
-      role_id: historyItem.RoleID,
-      voice_url: historyItem.VoiceURL,
-      asr_text: historyItem.ASRText,
-      response_type: historyItem.ResponseType,
-      created_at: historyItem.CreatedAt
+      id: historyItem.id,
+      role: historyItem.is_user ? 'user' : 'ai',
+      message: historyItem.message,
+      type: historyItem.message_type || 'text',
+      timestamp: new Date(historyItem.created_at).toLocaleTimeString(),
+      role_id: historyItem.role_id,
+      voice_url: historyItem.voice_url,
+      asr_text: historyItem.asr_text,
+      response_type: historyItem.response_type,
+      created_at: historyItem.created_at
     }
   }, [])
 
@@ -59,8 +56,8 @@ const ChatArea = ({
     setLoading(true)
     try {
       const response = await getroleHistory(selectedCharacter.ID)
-      if (response?.data?.text_histories && response.data.text_histories.length > 0) {
-        const transformedMessages = response.data.text_histories.map(transformHistoryMessage)
+      if (response?.data && Array.isArray(response.data) && response.data.length > 0) {
+        const transformedMessages = response.data.map(transformHistoryMessage)
         setHistoryMessages(transformedMessages)
         
         // 初始显示最新的消息（数组末尾）
@@ -76,7 +73,6 @@ const ChatArea = ({
         }, 100)
       }
     } catch (error) {
-      console.error('加载历史消息失败:', error)
     } finally {
       setLoading(false)
     }
@@ -125,7 +121,7 @@ const ChatArea = ({
   }, [visibleMessages])
 
   // 合并历史消息和当前会话消息
-  const allMessages = [...visibleMessages, ...messages]
+  const  allMessages = [...visibleMessages, ...messages]
   
   return (
     <>
@@ -135,7 +131,7 @@ const ChatArea = ({
         ref={containerRef}
         onScroll={handleScroll}
         style={{ 
-          maxHeight: '500px', 
+          maxHeight: '50rem', 
           overflowY: 'auto',
           padding: '1rem'
         }}
@@ -170,14 +166,12 @@ const ChatArea = ({
               }}
             >
               <div className={`message-avatar ${message.role}`}>
-                <Avatar 
-                  size={32}
+                <LazyAvatar 
+                  size={40} 
+                  src={message.role === 'ai'?selectedCharacter.avatar_url?selectedCharacter.avatar_url:null:null}
                   icon={message.role === 'user' ? <UserOutlined /> : ''}
                   style={{ fontSize: '0.875rem' }}
-                  src={message.role === 'ai'?selectedCharacter.avatar_url?selectedCharacter.avatar_url:null:null}
-                >
-                  {selectedCharacter.avatar_url?.startsWith('http') ? '' : '🤖'}
-                </Avatar>
+                />
               </div>
 
               {message.type === 'text' && (
@@ -200,6 +194,20 @@ const ChatArea = ({
                   maxWidth={250}
                   minWidth={100}
                 />
+              )}
+              {/* 语音通话气泡 */}
+              {message.type === 'voice_call' && (
+                <div onClick={()=>{setStarCalls(true)}}  className='voice-call'>
+                  <div className={`message-bubble ${message.role}`}>
+                     <PhoneOutlined />
+                     <span style={{ marginLeft: `0.5rem`}}>
+                        {Number(message?.message)?`语音通话（${formatDuration(message?.message)}）`:message?.message}
+                     </span>
+                  </div>
+                  <div className={`message-timestamp ${message.role}`}>
+                    {message.timestamp}
+                  </div>
+                </div>
               )}
             </div>
           </div>
