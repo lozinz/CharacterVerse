@@ -10,8 +10,7 @@ import  useChatStore  from '../../store/useChatStore'
 // 创建通话上下文
 const VoiceCallContext = createContext()
 const wsURL = import.meta.env.VITE_WEBSOCKET_URL
-
-const VIOCEURL = import.meta.env.UPVOICE_URL
+const VIOCEURL = import.meta.env.VITE_UPVOICE_URL
 
 // 通话状态枚举
 export const CALL_STATES = {
